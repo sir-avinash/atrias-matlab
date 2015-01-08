@@ -1,4 +1,14 @@
-# ATRIAS
-This is code to run the ATRIAS robot in Simulink Real-Time and to post-process the data.
+=====
+ABOUT
+=====
 
-To be continued
+A collaborative code base for operating and simulating the bipedal robot
+ATRIAS using MATLAB Simulink.
+
+============
+REQUIREMENTS
+============
+
+* MATLAB 2014b+ for Windows
+* Simulink Real-Time
+* SimMechanics

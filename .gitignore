@@ -1,0 +1,46 @@
+# Ignore directories #
+######################
+build/
+
+# Hidden backup files #
+#######################
+*.*~
+*.swp
+*.swo
+*.backup.m
+
+# MATLAB #
+##########
+*.mexw32
+*.mexw64
+*.mexa64
+*.mexglx
+*.mexmaci
+*.mexmaci64
+
+# Packages #
+############
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Icon?
+ehthumbs.db
+Thumbs.db
+
+# Multimedia files #
+####################
+*.mp4
+*.avi
