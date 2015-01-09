@@ -200,18 +200,18 @@ mu_stick = 1.00;
 mu_slide = 0.95;
 
 % Slip-stic transition velocity
-vLimit = 0.01; %[m/s]
+vLimit = 0.01; % [m/s]
 
 % Ground height
-max_floor_tile_height = 0.0;
+max_floor_tile_height = 0.1;
 floor_tile_width = 30*pi/180;
 tile_cross_section = [1.5 0.03; 1.5 0; 3 0; 3 0.03];
 tile_delta = [0 1; 0 0; 0 0; 0 1];
 rng(156); % random seed
-tile_scale = zeros(12, 1); % Flat ground
+% tile_scale = zeros(12, 1); % Flat ground
 % tile_scale = max_floor_tile_height*rand(2*pi/floor_tile_width, 1); % Random heights
-% tile_scale = linspace(0 ,max_floor_tile_height, 12)'; % Step down
-% tile_scale = linspace(max_floor_tile_height, 0, 12)'; % Step up
+% tile_scale = linspace(0 ,max_floor_tile_height, 12)'; % Step up
+tile_scale = linspace(max_floor_tile_height, 0, 12)'; % Step down
 max_floor_tile_height = max(tile_scale);
 cmap = jet(128);
 tile_color = cmap(floor((tile_scale/(max_floor_tile_height+eps))*length(cmap))+1,:);

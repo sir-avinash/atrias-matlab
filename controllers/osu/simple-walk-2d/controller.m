@@ -98,7 +98,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         % ground projection point of the toe and find the corresponding leg
         % angle given a desired length)
         d_sw = cubic(-l_step/2, -l_trig, l_step, -l_step, 0, 0, x_st, 1);
-        r_sw = pi/2 + acos(x_st + d_sw) - q(13);
+        r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
 
         % Target swing leg actuator positions
         q_sw = r_sw + [-1; 1]*acos(l_sw);
