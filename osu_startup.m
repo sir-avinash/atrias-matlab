@@ -1,27 +1,29 @@
+function osu_startup
 %OSU_STARTUP Oregon State University MATLAB startup script.
-    
-% Location of current folder on the file system
-currentFolder = fileparts(mfilename('fullpath'));
 
-% Add simulation folders to MATLAB path
-addpath([currentFolder '/atrias-simulator/']);
-sim_startup;
+  % Location of current folder on the file system
+  currentFolder = fileparts(mfilename('fullpath'));
 
-% Add real-time folders to MATLAB path
-addpath([currentFolder '/atrias-robot/']);
+  % Add simulation folders to MATLAB path
+  addpath([currentFolder '/atrias-simulator/']);
+  sim_startup;
 
-% Add tools folder to MATLAB path
-addpath([currentFolder '/tools/']);
+  % Add real-time folders to MATLAB path
+  addpath([currentFolder '/atrias-robot/']);
 
-% Open model to assign parameters
-atrias_system;
+  % Add tools folder to MATLAB path
+  addpath([currentFolder '/tools/']);
 
-% Assign ethercat parameters
-set_param('atrias_system/EtherCAT Init', 'pci_bus', '2');
-set_param('atrias_system/EtherCAT Init', 'pci_slot', '0');
+  % Open model to assign parameters
+  atrias_system;
 
-% Set workspace variables
-daq_params_osu;
+  % Assign ethercat parameters
+  set_param('atrias_system/EtherCAT Init', 'pci_bus', '2');
+  set_param('atrias_system/EtherCAT Init', 'pci_slot', '0');
 
-% Bring up the real-time explorer
-slrtexplr;
+  % Set workspace variables
+  daq_params_osu;
+
+  % Bring up the real-time explorer
+  slrtexplr;
+end % osu_startup
