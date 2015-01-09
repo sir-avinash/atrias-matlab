@@ -35,11 +35,9 @@ classdef BoomCoords < handle
 			% Save some offsets to match closely with the boom's angles themselves.
 			if this.prevState == IMUSysState.ALIGN
 				this.rollOff  = boomRoll - roll;
-				this.pitchOff = boomPitch - pitch;
 				this.yawOff   = boomYaw   - yaw;
 			end
 			roll  = roll + this.rollOff;
-			pitch = pitch + this.pitchOff;
 			yaw   = yaw   + this.yawOff;
 			this.prevState = state;
 		end
@@ -49,7 +47,6 @@ classdef BoomCoords < handle
 		prevState = 0
 		yaw = 0
 		rollOff = 0
-		pitchOff = 0
 		yawOff   = 0
 	end
 end
