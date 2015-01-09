@@ -17,14 +17,17 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     kd_leg = clamp(userIn(4), 0, 500); % Leg motor differential gain (N*m*s/rad)
     kp_hip = clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
     kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
+    l_step = clamp(userIn(7), 0, 1); % Step length (m)
+    l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
+    l_ext = clamp(userIn(9), 0, 0.05); % Leg push off (m)
     
     % Gait parameters
     ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
-    l_step = 0.55; % Step length (m) - Note: Average human step is 0.76m
+%     l_step = 0.55; % Step length (m) - Note: Average human step is 0.76m
     l_trig = -l_step/5; % Stance foot position that triggers swing leg extension (m)
-    l_ret = 0.1; % Leg retraction (m)
+%     l_ret = 0.1; % Leg retraction (m)
     l0 = 0.9; % Nominal leg length (m)
-    l_ext = 0.03; % Push off length (m)
+%     l_ext = 0.03; % Push off length (m)
     q0_torso = 0; % Target torso pitch (rad)
     s_leg = 0.5; % Scale leg actuator gains for swing phase
     s_torso = 0.5; % Scale leg actuator gains for torso stabilization

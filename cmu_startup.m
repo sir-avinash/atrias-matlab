@@ -18,10 +18,14 @@ addpath(...
     [currentFolder '/tools/']);
 
 % Open model to assign parameters
-atrias_system
+atrias_system;
 
 % Assign ethercat parameters
 set_param('atrias_system/EtherCAT Init', 'pci_bus', '2')
 set_param('atrias_system/EtherCAT Init', 'pci_slot', '0')
 
-daq_params_cmu
+% Set workspace variables
+daq_params_cmu;
+
+% Bring up the real-time explorer
+slrtexplr;
