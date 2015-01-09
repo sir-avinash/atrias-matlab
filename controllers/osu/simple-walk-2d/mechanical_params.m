@@ -170,13 +170,13 @@ thigh_initial_l = initial_l_leg_angle - acos(initial_l_leg_length);
 shin_initial_l = initial_l_leg_angle + acos(initial_l_leg_length);
 v_thigh_initial_r =  0;
 v_shin_initial_r =  0;
-initial_boom_yaw = 0;
+initial_boom_yaw = pi;
 initial_boom_pitch = 0;
-initial_com_height = 1;
+initial_com_height = 1.1;
 initial_boom_roll = asin((initial_com_height + boom_mount_to_com + boom_mount_to_center*tan(pitch_mount_angle) - (base_12(2) + yshaft_12(2))) / (l_boom + boom_mount_to_center_diagonal));
 initial_winch_angle = -12 * pi/180;
 initial_hip_roll = 0*pi/180;
-initial_dx = -1;
+initial_dx = 1;
 initial_boom_yaw_velocity = initial_dx / ((l_boom+boom_mount_to_center_diagonal)*cos(initial_boom_roll));
 
 %% CONTACT MODEL ==========================================================
@@ -210,8 +210,8 @@ tile_delta = [0 1; 0 0; 0 0; 0 1];
 rng(156); % random seed
 % tile_scale = zeros(12, 1); % Flat ground
 % tile_scale = max_floor_tile_height*rand(2*pi/floor_tile_width, 1); % Random heights
-% tile_scale = linspace(0 ,max_floor_tile_height, 12)'; % Step up
-tile_scale = linspace(max_floor_tile_height, 0, 12)'; % Step down
+tile_scale = linspace(0 ,max_floor_tile_height, 12)'; % Step down
+% tile_scale = linspace(max_floor_tile_height, 0, 12)'; % Step up
 max_floor_tile_height = max(tile_scale);
 cmap = jet(128);
 tile_color = cmap(floor((tile_scale/(max_floor_tile_height+eps))*length(cmap))+1,:);

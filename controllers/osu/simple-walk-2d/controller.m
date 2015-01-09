@@ -89,16 +89,19 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     case 1 % WALK ---------------------------------------------------------
         % Cartesian position of stance toe relative to hip in world frame
         x_st = sum(sin(q(13) + q(leg_l(1:2)))/2);
+        y_st = sum(cos(q(13) + q(leg_l(1:2)))/2);
+        y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
 
         % Swing leg retraction policy (immediately retract and extend once
         % past defined trigger point)
-        l_sw = l0 - l_ret*(x_st < -l_trig/2);
+        l_sw = l0 - l_ret*(x_st > l_trig/2);
 
         % Swing leg swing policy (use cubic spline to interpolate target
         % ground projection point of the toe and find the corresponding leg
         % angle given a desired length)
-        d_sw = cubic(-l_step/2, -l_trig, l_step, -l_step, 0, 0, x_st, 1);
-        r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
+        d_sw = cubic(l_step/2, l_trig, -l_step, l_step, 0, 0, x_st, 1);
+        %r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
+        r_sw = pi/2 + atan2(-y_st,x_st+d_sw) - q(13);
 
         % Target swing leg actuator positions
         q_sw = r_sw + [-1; 1]*acos(l_sw);
@@ -110,7 +113,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         u(leg_u(3:4)) = (q_sw - q(leg_m(3:4)))*kp_leg*s_leg + (dq_sw - dq(leg_m(3:4)))*kd_leg*s_leg;
 
         % Stance leg push off policy (extend leg after mid stance linearly)
-        l_st = l0 + l_ext*clamp(x_st/(l_step/2), 0, 1);
+        % and falling policy
+        l_st = l0 + l_ext*clamp(-x_st/(l_step/2), 0, 1) + 2*clamp(y_sw-y_st,-l_ret,0);
 
         % Target stance leg actuator positions
         q_st = mean(q(leg_l(1:2))) + [-1; 1]*acos(l_st);
@@ -135,7 +139,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
             s_sw*s_torso*((q(13) - q0_torso)*kp_leg + dq(13)*kd_leg);
 
         % Switch stance legs when swing leg force exceeds stance leg force
-        if s_sw > s_st && x_st > 0; stanceLeg = -stanceLeg; end % if
+        if s_sw > s_st && x_st < 0; stanceLeg = -stanceLeg; end % if
 
         % User outputs
         userOut = x_st;
