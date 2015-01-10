@@ -60,7 +60,7 @@ classdef IMUSys < handle
 			orient_corr = cross(this.align_accum, [0; 0; 1]);
 
 			% Catch the (rare!) case where no correction is necessary.
-			if orient_corr == 0
+			if all(orient_corr == 0)
 				return
 			end
 
@@ -75,7 +75,7 @@ classdef IMUSys < handle
 		% Main IMU operation state.
 		function run(this, gyros, seq, sample_time)
 			% Compute the size of the seq increment (note that seq wraps modulo 128).
-			dseq = mod(int8(seq) - int8(this.prevSeq), 128);
+			dseq = mod(int16(seq) - int16(this.prevSeq), int16(128));
 
 			% Compute the angular velocities
 			this.ang_vel = gyros / sample_time;

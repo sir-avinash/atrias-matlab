@@ -16,7 +16,7 @@ classdef Quat < handle
 					error(['Input vector size ' num2str(numel(vec)) ' is invalid. Must be 3 or 4'])
 			end
 
-			if size(vals) ~= [2 2]
+			if all(size(vals) ~= [2 2])
 				this.mat = [1 0; 0 1] * vals(1) + [i 0; 0 -i] * vals(2) + [0 1; -1 0] * vals(3) + [0 i; i 0] * vals(4);
 			else
 				this.mat = vals;

@@ -44,7 +44,7 @@ classdef BoomCoords < handle
 	end
 
 	properties
-		prevState = 0
+		prevState = IMUSysState.INIT
 		yaw = 0
 		rollOff = 0
 		yawOff   = 0
