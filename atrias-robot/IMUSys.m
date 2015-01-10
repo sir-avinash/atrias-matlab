@@ -38,7 +38,7 @@ classdef IMUSys < handle
 			% Quit if the alignment isn't done yet.
 			% To avoid needing an extra state variable, just accumulate
 			% until the accumulated acceleration magnitude exceeds 1 g * align time
-			align_time = 10; % seconds
+			align_time = 20; % seconds
 			if sample_time * norm(this.align_accum) < align_time
 				return
 			end
