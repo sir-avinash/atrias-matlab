@@ -40,9 +40,11 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     s_torso = 0.5; % Scale leg actuator gains for torso stabilization
     threshold = 50; % Spring torque threshold for scaling and switching (N*m)
 
-    % Declare persistent variables
-    persistent stanceLeg;
-    if isempty(stanceLeg); stanceLeg = 1; end % if
+    % Persistent variable to keep track of current stance leg
+    persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
+
+    % Persistent variable to keep track of extra swing leg clearence
+    persistent l_clr; if isempty(l_clr); l_clr = 0; end % if
 
     % Setup stance and swing indexes
     if stanceLeg == 1 % Left
@@ -90,18 +92,20 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         % Cartesian position of stance toe relative to hip in world frame
         x_st = sum(sin(q(13) + q(leg_l(1:2)))/2);
         y_st = sum(cos(q(13) + q(leg_l(1:2)))/2);
+
+        % Cartesian position of swing toe relative to hip in world frame
         y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
 
         % Swing leg retraction policy (immediately retract and extend once
         % past defined trigger point)
-        l_sw = l0 - l_ret*(x_st > l_trig/2);
+        l_sw = l0 - (l_ret + l_clr)*(x_st > l_trig/2);
 
         % Swing leg swing policy (use cubic spline to interpolate target
         % ground projection point of the toe and find the corresponding leg
         % angle given a desired length)
         d_sw = cubic(l_step/2, l_trig, -l_step, l_step, 0, 0, x_st, 1);
-        %r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
-        r_sw = pi/2 + atan2(-y_st,x_st+d_sw) - q(13);
+        r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
+        % r_sw = pi/2 + atan2(-y_st, x_st + d_sw) - q(13);
 
         % Target swing leg actuator positions
         q_sw = r_sw + [-1; 1]*acos(l_sw);
@@ -113,8 +117,10 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         u(leg_u(3:4)) = (q_sw - q(leg_m(3:4)))*kp_leg*s_leg + (dq_sw - dq(leg_m(3:4)))*kd_leg*s_leg;
 
         % Stance leg push off policy (extend leg after mid stance linearly)
-        % and falling policy
-        l_st = l0 + l_ext*clamp(-x_st/(l_step/2), 0, 1) + 2*clamp(y_sw-y_st,-l_ret,0);
+        l_st = l0 + l_ext*clamp(-x_st/(l_step/2), 0, 1);
+
+        % Stance leg step down policy (retract leg if drop is detected)
+        l_st = l_st + clamp(y_sw - y_st, -l_ret, 0);
 
         % Target stance leg actuator positions
         q_st = mean(q(leg_l(1:2))) + [-1; 1]*acos(l_st);
@@ -138,8 +144,14 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         u(leg_u(3:4)) = u(leg_u(3:4)) + ...
             s_sw*s_torso*((q(13) - q0_torso)*kp_leg + dq(13)*kd_leg);
 
-        % Switch stance legs when swing leg force exceeds stance leg force
-        if s_sw > s_st && x_st < 0; stanceLeg = -stanceLeg; end % if
+        % Detect when swing leg force exceeds stance leg force
+        if s_sw > s_st && x_st < 0;
+          % Switch stance legs
+          stanceLeg = -stanceLeg;
+
+          % Estimate extra required swing leg clearence in case of step
+          l_clr = abs(y_sw - y_st);
+        end % if
 
         % User outputs
         userOut = x_st;
