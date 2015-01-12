@@ -27,7 +27,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     kd_leg = clamp(userIn(4), 0, 500); % Leg motor differential gain (N*m*s/rad)
     kp_hip = clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
     kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
-    l_step = clamp(userIn(7), 0, 1); % Step length (m)
+    l_step = clamp(userIn(7), -1, 1); % Step length (m)
     l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
     l_ext = clamp(userIn(9), 0, 0.05); % Leg push off (m)
 
@@ -96,16 +96,15 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         % Cartesian position of swing toe relative to hip in world frame
         y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
 
-        % Swing leg retraction policy (immediately retract and extend once
+        % Swing leg retraction policy (immediately retract then extend once
         % past defined trigger point)
-        l_sw = l0 - (l_ret + l_clr)*(x_st > l_trig/2);
+        l_sw = l0 - (l_ret + l_clr)*(sign(l_step)*x_st > sign(l_step)*l_trig/2);
 
         % Swing leg swing policy (use cubic spline to interpolate target
         % ground projection point of the toe and find the corresponding leg
         % angle given a desired length)
         d_sw = cubic(l_step/2, l_trig, -l_step, l_step, 0, 0, x_st, 1);
         r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
-        % r_sw = pi/2 + atan2(-y_st, x_st + d_sw) - q(13);
 
         % Target swing leg actuator positions
         q_sw = r_sw + [-1; 1]*acos(l_sw);
@@ -145,7 +144,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
             s_sw*s_torso*((q(13) - q0_torso)*kp_leg + dq(13)*kd_leg);
 
         % Detect when swing leg force exceeds stance leg force
-        if s_sw > s_st && x_st < 0;
+        if s_sw > s_st && sign(l_step)*x_st < 0;
           % Switch stance legs
           stanceLeg = -stanceLeg;
 
