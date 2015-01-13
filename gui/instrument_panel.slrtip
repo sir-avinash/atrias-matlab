@@ -1290,6 +1290,31 @@
     </Object>
     <Object type="System.Windows.Forms.GroupBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" name="GroupBox11" children="Controls">
       <Object type="System.Windows.Forms.GroupBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" name="GroupBox13" children="Controls">
+        <Object type="MW.Instruments.NumericDisplay, mwio, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="NumericDisplay219" children="Controls">
+          <Property name="BindingSrcType">Signal</Property>
+          <Property name="OutputValue">0</Property>
+          <Property name="BindingSrcPath">IMU/p11</Property>
+          <Property name="BindingSrcObject" />
+          <Property name="TargetName">TargetPC1</Property>
+          <Property name="TextFormatting">
+            <Property name="Precision">0</Property>
+            <Property name="PrecisionStyle">FixedDecimalPoints</Property>
+          </Property>
+          <Property name="Size">24, 24</Property>
+          <Property name="Font">Segoe UI, 8pt</Property>
+          <Property name="Location">100, 115</Property>
+          <Property name="Name">NumericDisplay219</Property>
+        </Object>
+        <Object type="System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" name="Label141" children="Controls">
+          <Property name="TextAlign">MiddleLeft</Property>
+          <Property name="Text">Failure reason:</Property>
+          <Property name="UseCompatibleTextRendering">True</Property>
+          <Property name="Font">Segoe UI, 8pt, style=Bold</Property>
+          <Property name="ForeColor">Black</Property>
+          <Property name="Location">6, 115</Property>
+          <Property name="Name">Label141</Property>
+          <Property name="Size">88, 24</Property>
+        </Object>
         <Object type="System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" name="Label140" children="Controls">
           <Property name="TextAlign">MiddleLeft</Property>
           <Property name="Text">Failed align</Property>
@@ -1376,7 +1401,7 @@
         <Property name="Font">Segoe UI, 10pt, style=Bold</Property>
         <Property name="Location">6, 19</Property>
         <Property name="Name">GroupBox13</Property>
-        <Property name="Size">131, 124</Property>
+        <Property name="Size">131, 145</Property>
       </Object>
       <Property name="Text">IMU</Property>
       <Property name="UseCompatibleTextRendering">True</Property>
@@ -1384,7 +1409,7 @@
       <Property name="Font">Segoe UI, 10pt, style=Bold</Property>
       <Property name="Location">413, 534</Property>
       <Property name="Name">GroupBox11</Property>
-      <Property name="Size">144, 151</Property>
+      <Property name="Size">144, 177</Property>
     </Object>
     <Object type="System.Windows.Forms.GroupBox, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" name="GroupBox9" children="Controls">
       <Object type="MW.Instruments.NumericDisplay, mwio, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="NumericDisplay140" children="Controls">
