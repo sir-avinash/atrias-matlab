@@ -7,7 +7,7 @@ build/
 *.*~
 *.swp
 *.swo
-*.backup.m
+*.backup
 *.autosave
 
 # MATLAB #
