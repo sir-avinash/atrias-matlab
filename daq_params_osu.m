@@ -10,6 +10,9 @@
 %   leg = shin/thigh encoders
 %   trans = motor encoders
 
+% Location dependent values
+latitude = 44.5673031; % The DRL's latitude, according to Google Maps
+
 % Update rates
 update_freq = 1000; %Hz
 sample_time = 1/update_freq; % seconds
@@ -129,5 +132,6 @@ INC_ENC_DIRS         = -[ LEG1_MOTOR_A_DIRECTION
                           LEG2_MOTOR_B_DIRECTION ];
 MEDULLA_TIMER_FREQ = 32e6;
 
-% The distance between the hip pivot and the leg motors pivot (the center of the leg)
-HIP_WIDTH = .18;
+% IMU parameters
+align_gyro_tol  = 1e-6; % Angular rate at which the alignment will fail.       Units: radians per millisecond
+align_accel_tol = .02;  % Acceleration error at which the alignment will fail. Units: g
