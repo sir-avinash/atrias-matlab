@@ -133,5 +133,6 @@ INC_ENC_DIRS         = -[ LEG1_MOTOR_A_DIRECTION
 MEDULLA_TIMER_FREQ = 32e6;
 
 % IMU parameters
-align_gyro_tol  = 1e-6; % Angular rate at which the alignment will fail.       Units: radians per millisecond
-align_accel_tol = .02;  % Acceleration error at which the alignment will fail. Units: g
+align_time_ms   = 10 * 1000; % Alignment time, in milliseconds
+align_gyro_tol  = 1e-6;      % Angular rate at which the alignment will fail.       Units: radians per millisecond
+align_accel_tol = .02;       % Acceleration error at which the alignment will fail. Units: g
