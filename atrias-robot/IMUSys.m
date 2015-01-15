@@ -137,7 +137,7 @@ classdef IMUSys < handle
 
 			% Check if the bias is acceptable
 			if norm(this.gyro_bias) > align_bias_tol
-				this.fail_reas = IMUFailReason.BIG_BIAS
+				this.fail_reas = IMUFailReason.BIG_BIAS;
 				return
 			end
 		end
