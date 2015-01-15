@@ -64,17 +64,18 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Persistent variable to keep track of extra swing leg clearence
     persistent l_clr; if isempty(l_clr); l_clr = 0; end % if
     
-    % TODO
+    % Persistent variable to keep track of states at last switch
     persistent x_st_e; if isempty(x_st_e); x_st_e = 0; end % if
     persistent x_sw_e; if isempty(x_sw_e); x_sw_e = 0; end % if
     
-    % TODO
+    % Persistent variable to keep track controller type
     persistent isStand; if isempty(isStand); isStand = abs(velocity) < 0.75; end % if
     
-    % TODO
-    persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
+    % Simulation time and velocity profile
+%     persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
 %     velocity = 0 + 1.2*(T > 2 && T < 7);
 
+    % Persistent variable to keep track of time since last switch
     persistent t; if isempty(t); t = 0; else t = t + 0.001; end % if
     
     % Setup stance and swing indexes
@@ -128,19 +129,35 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
         % Current forward velocity
         dx = cos((q(leg_l(2)) - q(leg_l(1)))/2)*mean(dq(13) + dq(leg_l(1:2)));
-%         dx = dq(12)*2.0404*cos(q(11));
 
-        % Compute step length and push-off from target speed
+        % Stance leg push-off is proportional to desired speed
+        l_ext = clamp(sign(dx)*abs(velocity)/30, 0, 0.05);
+            
+        % Tune parameters for desired speed
         if isStand
+            % Step length is proportional to curent and error in velocity
             l_step = clamp(0.2*dx - clamp(0.2*(velocity - dx), -0.05, 0.05) - x_st, -0.5, 0.5);
+            
+            % Stance leg push-off is pro
             l_ext = clamp(sign(dx)*abs(velocity)/30, 0, 0.05);
+            
+            % Set leg swing trigger point
             trig = 0.9;
+            
+            % Define a time variant parameter
             s = t/0.5;
         else
+            % Step length is constant and in direction of target velocity
             l_step = sign(velocity)*0.5;
-            l_ext = clamp(sign(dx)*abs(velocity)/30, 0, 0.05);
+            
+            % If current speed is less than 0.75 use full extension
             if abs(dx) < 0.75; l_ext = 0.05; end % if
+            
+            % Set leg swing trigger point
             trig = 0.6;
+            
+            % Scale gains based on roughness of terrain
+            s_leg = clamp(s_leg + l_clr*3, s_leg, 1);
             
             % Define time invariant parameter based on hip position
             s = -(x_st - x_st_e)/(x_st_e + l_step/2);
@@ -253,12 +270,3 @@ function [y, dy] = cubic(x1, x2, y1, y2, dy1, dy2, x, dx)
     y = a0*s^3 + a1*s^2 + a2*s + a3;
     dy = dx*(-3*a0*(x - x1)^2/(x1 - x2)^3 + 2*a1*(x - x1)/(x1 - x2)^2 - a2/(x1 - x2));
 end % cubic
-
-% function b = rateLimit(a, da, reset)
-% %RATELIMIT
-% 
-%     if nargin == 2; reset = false; end % if
-%     persistent a_old; if isempty(a_old) || reset; a_old = a; end % if
-%     b = a_old + clamp(a - a_old, -da, da);
-%     a_old = b;
-% end % rateLimit
