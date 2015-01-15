@@ -106,8 +106,8 @@ BOOM_HEIGHT = 1.0287; % meters, top of the center of rotation to robot ground le
 
 % Soft limits for motor positions
 limExt = 0.4;
-MOTOR_POSITION_LIMITS_UPPER = [3.75-limExt; 4.94-limExt; 2.47-0.6]; % A B retraction
-MOTOR_POSITION_LIMITS_LOWER = [1.35+limExt; 2.52+limExt; 0.50+0.15]; % A B extension
+MOTOR_POSITION_LIMITS_UPPER = [3.60-limExt; 4.78-limExt; 2.47-0.6]; % A B retraction
+MOTOR_POSITION_LIMITS_LOWER = [1.51+limExt; 2.68+limExt; 0.50+0.15]; % A B extension
 
 %% params for DAQ functions
 fcut_smooth = 16*(2*pi); % Hz, low pass filter cutoff frequency for removing encoder dropouts
