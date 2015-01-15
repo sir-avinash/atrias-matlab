@@ -11,11 +11,11 @@ classdef BoomCoords < handle
 			pitch = -asin(2 * (orient(2)*orient(4) - orient(1)*orient(3)) / cos(roll));
 
 			% Yaw's more difficult, because we need to de-wrap it. Produce the horizontally-projected yaw vector
-			yaw_vec = [[1, -1, 1, -1] * orient.^2; 2*(orient(1)*orient(4) - orient(2)*orient(3)); 0] / cos(roll);
+			yaw_vec = [[1, -1, 1, -1] * orient.^2; 2*(orient(1)*orient(4) - orient(2)*orient(3))] / cos(roll);
 
-			% Perform the yaw update using a cross product
-			yawCross = cross(yaw_vec, [cos(this.yaw); -sin(this.yaw); 0]);
-			this.yaw = this.yaw + asin(yawCross(3));
+			% Perform the yaw update
+			yawTheta = atan2(dot(yaw_vec, [-sin(this.yaw); -cos(this.yaw)]), dot(yaw_vec, [cos(this.yaw); -sin(this.yaw)]));
+			this.yaw = this.yaw + yawTheta;
 
 			% Set the final yaw output
 			yaw = this.yaw;
