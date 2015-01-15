@@ -108,7 +108,7 @@ BOOM_ROBOT_VERTICAL_OFFSET = 0.3434; % meters,
 BOOM_HEIGHT = 1.0287; % meters, top of the center of rotation to robot ground level
 
 % Soft limits for motor positions
-limExt = 0.4;
+limExt = 0.1;
 MOTOR_POSITION_LIMITS_UPPER = [3.60-limExt; 4.78-limExt; 2.47-0.6]; % A B retraction
 MOTOR_POSITION_LIMITS_LOWER = [1.51+limExt; 2.68+limExt; 0.50+0.15]; % A B extension
 
