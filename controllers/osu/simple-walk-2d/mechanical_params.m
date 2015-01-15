@@ -161,22 +161,22 @@ kd_winch = td_winch*kp_winch;
 
 %% INITIAL CONDITIONS =====================================================
 initial_r_leg_length = 0.9;
-initial_r_leg_angle = pi + 0.2;
+initial_r_leg_angle = pi;% + 0.2;
 thigh_initial_r = initial_r_leg_angle - acos(initial_r_leg_length);
 shin_initial_r = initial_r_leg_angle + acos(initial_r_leg_length);
 initial_l_leg_length = 0.9;
-initial_l_leg_angle = pi - 0.2;
+initial_l_leg_angle = pi;% - 0.2;
 thigh_initial_l = initial_l_leg_angle - acos(initial_l_leg_length);
 shin_initial_l = initial_l_leg_angle + acos(initial_l_leg_length);
 v_thigh_initial_r =  0;
 v_shin_initial_r =  0;
-initial_boom_yaw = pi/12;
+initial_boom_yaw = 0*pi/12;
 initial_boom_pitch = 0;
 initial_com_height = 1;
 initial_boom_roll = asin((initial_com_height + boom_mount_to_com + boom_mount_to_center*tan(pitch_mount_angle) - (base_12(2) + yshaft_12(2))) / (l_boom + boom_mount_to_center_diagonal));
 initial_winch_angle = -12*pi/180;
 initial_hip_roll = 0*pi/180;
-initial_dx = 1;
+initial_dx = 0.25;
 initial_boom_yaw_velocity = initial_dx / ((l_boom+boom_mount_to_center_diagonal)*cos(initial_boom_roll));
 
 %% CONTACT MODEL ==========================================================

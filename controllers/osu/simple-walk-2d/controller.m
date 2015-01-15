@@ -2,7 +2,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 %CONTROLLER Simple ATRIAS walking controller.
 %
 % Description:
-%	  This controller unifies a number of fundamental concepts learned
+%   This controller unifies a number of fundamental concepts learned
 %   through observation of the SLIP model and past failed experiments.
 %   The controller is heuristically built up in layers and includes a few
 %   key concepts:
@@ -12,6 +12,26 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 %     * Ground speed matching and fixed stride length before impact
 %     * Both legs stabilize torso but with a weight based on leg force
 %     * Leg relabeling occurs when swing leg force exceed stance leg force
+%
+% Notes:
+%   * Anything under 0.75 uses dynamic standing controller
+%   * Anything above 0.75 uses walk controller
+%   * If going from stand to walk, (same direction) do one step transistion
+%   * If going from stand to walk, (other direction) first ramp speed to
+%   zero then do one step transistion
+%   * If going from walk to stand, slow down, switch to stand
+%   * If switching direction of walk, first slow down then switch to stand,
+%   come to stop, then take single step in new direction
+%
+% Plan:
+%   * Verify walk works over obstacles and can reliable control speed
+%   * Verify stand can stand in place and stagger around under 0.75
+%   * Confirm simple stagger stand is best way to do things, being closer
+%   to walk controller would be better
+%   * Get fast walk to slow down and transition to stand smoothly.
+%   * Get stand to walk to work smoothly
+%   * Then think about othercase (velocity change rate limit when there is
+%   a sign flip
 %
 % Copyright 2015 Mikhail S. Jones
 
@@ -27,9 +47,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     kd_leg = clamp(userIn(4), 0, 500); % Leg motor differential gain (N*m*s/rad)
     kp_hip = clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
     kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
-    l_step = clamp(userIn(7), -1, 1); % Step length (m)
+    velocity = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
     l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
-    l_ext = clamp(userIn(9), 0, 0.05); % Leg push off (m)
 
     % Gait parameters
     ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
@@ -44,7 +63,20 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Persistent variable to keep track of extra swing leg clearence
     persistent l_clr; if isempty(l_clr); l_clr = 0; end % if
+    
+    % TODO
+    persistent x_st_e; if isempty(x_st_e); x_st_e = 0; end % if
+    persistent x_sw_e; if isempty(x_sw_e); x_sw_e = 0; end % if
+    
+    % TODO
+    persistent isStand; if isempty(isStand); isStand = abs(velocity) < 0.75; end % if
+    
+    % TODO
+    persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
+%     velocity = 0 + 1.2*(T > 2 && T < 7);
 
+    persistent t; if isempty(t); t = 0; else t = t + 0.001; end % if
+    
     % Setup stance and swing indexes
     if stanceLeg == 1 % Left
         leg_m = [8 6 4 2]; leg_l = [7 5 3 1]; leg_u = [5 4 2 1];
@@ -79,7 +111,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     switch state
     case 0 % STAND --------------------------------------------------------
         % Target leg actuator positions (standing with legs split)
-        q0_leg = pi + [-0.2; -0.2; 0.2; 0.2] + [-1; 1; -1; 1]*acos(l0);
+        q0_leg = pi + [-1; 1; -1; 1]*acos(l0);
 
         % Target leg actuator velocities
         dq0_leg = zeros(4,1);
@@ -91,19 +123,37 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         % Cartesian position of toes relative to hip in world frame
         x_st = sum(sin(q(13) + q(leg_l(1:2)))/2);
         y_st = sum(cos(q(13) + q(leg_l(1:2)))/2);
+        x_sw = sum(sin(q(13) + q(leg_l(3:4)))/2);
         y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
-        
-        % Define time invariant parameter based on hip position
-        s = -(x_st - l_step/2)/l_step;
 
+        % Current forward velocity
+        dx = cos((q(leg_l(2)) - q(leg_l(1)))/2)*mean(dq(13) + dq(leg_l(1:2)));
+%         dx = dq(12)*2.0404*cos(q(11));
+
+        % Compute step length and push-off from target speed
+        if isStand
+            l_step = clamp(0.2*dx - clamp(0.2*(velocity - dx), -0.05, 0.05) - x_st, -0.5, 0.5);
+            l_ext = clamp(sign(dx)*abs(velocity)/30, 0, 0.05);
+            trig = 0.9;
+            s = t/0.5;
+        else
+            l_step = sign(velocity)*0.5;
+            l_ext = clamp(sign(dx)*abs(velocity)/30, 0, 0.05);
+            if abs(dx) < 0.75; l_ext = 0.05; end % if
+            trig = 0.6;
+            
+            % Define time invariant parameter based on hip position
+            s = -(x_st - x_st_e)/(x_st_e + l_step/2);
+        end % if
+        
         % Swing leg retraction policy (immediately retract then extend once
         % past defined trigger point)
-        l_sw = l0 - (l_ret + l_clr)*(s < 0.6);
+        l_sw = l0 - (l_ret + l_clr)*(s < trig);
 
         % Swing leg swing policy (use cubic spline to interpolate target
         % ground projection point of the toe and find the corresponding leg
         % angle given a desired length)
-        d_sw = cubic(0, 0.7, -l_step, l_step, 0, 0, s, 1);
+        d_sw = cubic(0, 0.7, x_sw_e - x_st_e, l_step, 0, 0, s, 1);
         r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
 
         % Target swing leg actuator positions
@@ -144,16 +194,26 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
             s_sw*s_torso*((q(13) - q0_torso)*kp_leg + dq(13)*kd_leg);
 
         % Detect when swing leg force exceeds stance leg force
-        if s_sw > s_st && s > 0.5
-          % Switch stance legs
-          stanceLeg = -stanceLeg;
+        if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)
+            % Switch stance legs
+            stanceLeg = -stanceLeg;
 
-          % Estimate extra required swing leg clearence in case of step
-          l_clr = abs(y_sw - y_st);
+            % Estimate extra required swing leg clearence in case of step
+            l_clr = ~isStand*clamp(abs(y_sw - y_st), 0, 0.15);
+
+            % Reset time since last switch
+            t = 0;
+
+            % Exit conditions
+            x_st_e = x_sw;
+            x_sw_e = x_st;
+
+            % TODO
+            isStand = abs(velocity) < 0.75;
         end % if
 
         % User outputs
-        userOut = x_st;
+        userOut = dx;
 
     otherwise % RELAX -----------------------------------------------------
         % Leg actuator torques computed to behave like virtual dampers
@@ -193,3 +253,12 @@ function [y, dy] = cubic(x1, x2, y1, y2, dy1, dy2, x, dx)
     y = a0*s^3 + a1*s^2 + a2*s + a3;
     dy = dx*(-3*a0*(x - x1)^2/(x1 - x2)^3 + 2*a1*(x - x1)/(x1 - x2)^2 - a2/(x1 - x2));
 end % cubic
+
+% function b = rateLimit(a, da, reset)
+% %RATELIMIT
+% 
+%     if nargin == 2; reset = false; end % if
+%     persistent a_old; if isempty(a_old) || reset; a_old = a; end % if
+%     b = a_old + clamp(a - a_old, -da, da);
+%     a_old = b;
+% end % rateLimit
