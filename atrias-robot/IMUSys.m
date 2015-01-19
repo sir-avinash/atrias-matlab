@@ -33,7 +33,7 @@ classdef IMUSys < handle
 			% If the gyros or accelerometers read something too large,
 			% terminate alignment and indicate the error
 			if norm(gyros) >= align_gyro_tol || abs(norm(accels) - 1) >= align_accel_tol
-				this.state     = IMUSysState.FAIL_ALIGN;
+				this.state     = IMUSysState.FAIL;
 				this.fail_reas = IMUFailReason.MOTION;
 				return
 			end
@@ -48,12 +48,12 @@ classdef IMUSys < handle
 
 
 			% Run through the alignment steps. Check for errors in between each step and terminate if an error was found.
-			% For simplicity, we'll set the FAIL_ALIGN state here so that an alignment step only needs to set fail_real to signal an error
+			% For simplicity, we'll set the FAIL state here so that an alignment step only needs to set fail_real to signal an error
 
 			this.align_step1
 
 			if this.fail_reas ~= IMUFailReason.NONE
-				this.state = IMUSysState.FAIL_ALIGN;
+				this.state = IMUSysState.FAIL;
 				return
 			end
 
@@ -64,7 +64,7 @@ classdef IMUSys < handle
 			this.align_step3(earth_rot_rate, latitude, align_bias_tol)
 
 			if this.fail_reas ~= IMUFailReason.NONE
-				this.state = IMUSysState.FAIL_ALIGN;
+				this.state = IMUSysState.FAIL;
 				return
 			end
 
@@ -186,6 +186,26 @@ classdef IMUSys < handle
 
 				% Update our stored values for the next iteration
 				this.prevSeq = seq;
+
+				% Update the missed sequence counter with this new information
+				if this.missed_seq_cntr > 0
+					this.missed_seq_cntr = this.missed_seq_cntr - 1;
+				end
+			else
+				% No new data this cycle. If we've previously gotten new data, this is an error.
+
+				% First, ignore the case where we have not yet gotten new IMU data or have already failed
+				if this.state == IMUSysState.ALIGN || this.state == IMUSysState.RUN
+					% Record the missed sequence
+					this.missed_seq_cntr = this.missed_seq_cntr + 1;
+
+					% Check if this surpasses our missed sequence tolerance
+					if this.missed_seq_cntr >= 2
+						% Uh oh... watchdog failure. Fail and indicate the failure reason
+						this.state     = IMUSysState.FAIL;
+						this.fail_reas = IMUFailReason.WATCHDOG;
+					end
+				end
 			end
 
 			% Update the function outputs
@@ -226,9 +246,12 @@ classdef IMUSys < handle
 		% Similarly, the orientation of the ATRIAS coordinate frame in the IMU frame
 		local_rel_imu
 
+		% A counter which records missed sequences; used for a watchdog.
+		missed_seq_cntr = uint8(0)
+
 		% Previous sequence value; kept to detect when new data is available and
 		% to begin alignment at the correct time.
-		prevSeq = uint8(0);
+		prevSeq = uint8(0)
 
 		% Current alignment state
 		state = IMUSysState.INIT;
