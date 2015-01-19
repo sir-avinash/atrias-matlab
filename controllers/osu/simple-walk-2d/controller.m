@@ -47,7 +47,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     kd_leg = clamp(userIn(4), 0, 500); % Leg motor differential gain (N*m*s/rad)
     kp_hip = clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
     kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
-    velocity = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
+    v_cmd = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
     l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
 
     % Gait parameters
@@ -58,6 +58,10 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     s_torso = 0.5; % Scale leg actuator gains for torso stabilization
     threshold = 50; % Spring torque threshold for scaling and switching (N*m)
 
+    % Simulation time and velocity profile
+    persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
+    v_cmd = (T > 1)*1.5*sign(sin(2*T/pi));
+    
     % Persistent variable to keep track of current stance leg
     persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
 
@@ -69,11 +73,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     persistent x_sw_e; if isempty(x_sw_e); x_sw_e = 0; end % if
     
     % Persistent variable to keep track controller type
-    persistent isStand; if isempty(isStand); isStand = abs(velocity) < 0.75; end % if
-    
-    % Simulation time and velocity profile
-%     persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
-%     velocity = 0 + 1.2*(T > 2 && T < 7);
+    persistent v_tgt; if isempty(v_tgt); v_tgt = v_cmd; end % if
+    persistent isStand; if isempty(isStand); isStand = true; end % if
 
     % Persistent variable to keep track of time since last switch
     persistent t; if isempty(t); t = 0; else t = t + 0.001; end % if
@@ -111,7 +112,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     switch state
     case 0 % STAND --------------------------------------------------------
-        % Target leg actuator positions (standing with legs split)
+        % Target leg actuator positions
         q0_leg = pi + [-1; 1; -1; 1]*acos(l0);
 
         % Target leg actuator velocities
@@ -127,40 +128,37 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         x_sw = sum(sin(q(13) + q(leg_l(3:4)))/2);
         y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
 
-        % Current forward velocity
+        % Forward velocity computed from stance leg velocities
         dx = cos((q(leg_l(2)) - q(leg_l(1)))/2)*mean(dq(13) + dq(leg_l(1:2)));
 
-        % Stance leg push-off is proportional to desired speed
-        l_ext = clamp(sign(dx)*abs(velocity)/30, 0, 0.05);
+        % Stance leg push-off is proportional to desired speed and error
+        l_ext = clamp(...
+            1/30*abs(v_tgt) + ...
+            1/20*sign(v_tgt)*(v_tgt - dx), ...
+            0, 0.05)*(sign(v_tgt) == sign(dx));
             
         % Tune parameters for desired speed
         if isStand
-            % Step length is proportional to curent and error in velocity
-            l_step = clamp(0.2*dx - clamp(0.2*(velocity - dx), -0.05, 0.05) - x_st, -0.5, 0.5);
-            
-            % Stance leg push-off is pro
-            l_ext = clamp(sign(dx)*abs(velocity)/30, 0, 0.05);
+            % Step length is proportional to current velocity and error
+            l_step = clamp(...
+                0.2*dx - ...
+                clamp(0.2*(v_tgt - dx), -0.1, 0.1) - ...
+                x_st, -0.5, 0.5);
             
             % Set leg swing trigger point
-            trig = 0.9;
+            trig = 0.8;
             
             % Define a time variant parameter
             s = t/0.5;
         else
             % Step length is constant and in direction of target velocity
-            l_step = sign(velocity)*0.5;
-            
-            % If current speed is less than 0.75 use full extension
-            if abs(dx) < 0.75; l_ext = 0.05; end % if
+            l_step = sign(v_tgt)*0.5;
             
             % Set leg swing trigger point
             trig = 0.6;
             
-            % Scale gains based on roughness of terrain
-            s_leg = clamp(s_leg + l_clr*3, s_leg, 1);
-            
             % Define time invariant parameter based on hip position
-            s = -(x_st - x_st_e)/(x_st_e + l_step/2);
+            s = (x_st_e - x_st)/(x_st_e + l_step/2);
         end % if
         
         % Swing leg retraction policy (immediately retract then extend once
@@ -216,7 +214,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
             stanceLeg = -stanceLeg;
 
             % Estimate extra required swing leg clearence in case of step
-            l_clr = ~isStand*clamp(abs(y_sw - y_st), 0, 0.15);
+            l_clr = ~isStand*clamp(abs(y_sw - y_st), 0, 0.15); % TODO: check if isStand is needed
 
             % Reset time since last switch
             t = 0;
@@ -226,7 +224,17 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
             x_sw_e = x_st;
 
             % TODO
-            isStand = abs(velocity) < 0.75;
+            isStand = false;
+            if abs(v_cmd) < 0.75 || sign(v_cmd) ~= sign(dx)
+                if abs(dx) > 1;
+                    v_tgt = sign(dx)*0.75;
+                else
+                    v_tgt = 0;
+                    isStand = true;
+                end % if
+            else
+                v_tgt = v_cmd;
+            end % if
         end % if
 
         % User outputs

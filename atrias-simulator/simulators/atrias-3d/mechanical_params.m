@@ -104,6 +104,30 @@ m_hshaft = 18; % includes spring plates
 i_hshaft_moments = [0.29 0.10 0.27];
 i_hshaft_products = [0 0 0.1];
 
+%% BOOM ===================================================================
+pitch_mount_angle = 7.2824 * pi/180;
+
+% Boom tube
+l_boom = 1.8161;
+boom_12 = [0 0 -l_boom];
+com_boom = [0 0 -1.33];
+m_boom = 4.49;
+i_boom_moments = [3.9 3.9 0];
+i_boom_products = [0 0 0];
+
+% Yaw shaft
+yshaft_12 = [0 0.9906 0];
+com_yshaft = [0 1 -0.15];
+m_yshaft = 12.89;
+i_yshaft_moments = [8 3.3 4.9];
+i_yshaft_products = [-3 0 0];
+
+% Boom base
+base_12 = [0 0 0];
+
+% Counter weight
+counterweight_mass = 0;
+
 %% TORSO ==================================================================
 boom_mount_to_hip = 0.318;
 boom_mount_to_center = 0.2225;
@@ -115,6 +139,8 @@ i_torso_moments = [1.5 1.5 2.2];
 i_torso_products = [0 0 0];
 winch_hook_offset = [0 0.375 -0.2225];
 d_hip_com_to_torso_com = boom_mount_to_hip - com_hshaft(2) + com_torso(2);
+d_pelvis_to_torso = boom_mount_to_hip + com_torso(2);
+d_pelvis_to_IMU = [4.720 18.770 6.327]*2.54/100; 
 
 %% OTHER ==================================================================
 
@@ -131,11 +157,11 @@ i_robot = i_torso_moments(3) + m_torso*(d_hip_com_to_torso_com - d_com)^2 + num_
 
 %% INITIAL CONDITIONS =====================================================
 initial_r_leg_length = 0.9;
-initial_r_leg_angle =  pi + 0.2;
+initial_r_leg_angle =  pi;% + 0.2;
 thigh_initial_r = initial_r_leg_angle - acos(initial_r_leg_length);
 shin_initial_r = initial_r_leg_angle + acos(initial_r_leg_length);
 initial_l_leg_length = 0.9;
-initial_l_leg_angle = pi - 0.2;
+initial_l_leg_angle = pi;% - 0.2;
 thigh_initial_l = initial_l_leg_angle - acos(initial_l_leg_length);
 shin_initial_l = initial_l_leg_angle + acos(initial_l_leg_length);
 v_thigh_initial_r =  0;
@@ -147,7 +173,7 @@ initial_torso_pitch = 0*pi/180;
 initial_torso_roll = 0*pi/180;
 initial_pitch_joint_height = initial_com_height + boom_mount_to_com;
 initial_hip_roll = 0;
-initial_dx = -1;
+initial_dx = 0;
 
 %% CONTACT MODEL ==========================================================
 

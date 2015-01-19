@@ -176,7 +176,7 @@ initial_com_height = 1;
 initial_boom_roll = asin((initial_com_height + boom_mount_to_com + boom_mount_to_center*tan(pitch_mount_angle) - (base_12(2) + yshaft_12(2))) / (l_boom + boom_mount_to_center_diagonal));
 initial_winch_angle = -12*pi/180;
 initial_hip_roll = 0*pi/180;
-initial_dx = 0.25;
+initial_dx = 0;
 initial_boom_yaw_velocity = initial_dx / ((l_boom+boom_mount_to_center_diagonal)*cos(initial_boom_roll));
 
 %% CONTACT MODEL ==========================================================
