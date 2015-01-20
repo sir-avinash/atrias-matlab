@@ -45,10 +45,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     u_lim = clamp(userIn(2), 0, 600); % Motor torque limit (N*m)
     kp_leg = clamp(userIn(3), 0, 5000); % Leg motor proportional gain (N*m/rad)
     kd_leg = clamp(userIn(4), 0, 500); % Leg motor differential gain (N*m*s/rad)
-    kp_hip = 1500; %clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
-    kd_hip = 50; %clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
-    k1 = clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
-    k2 = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
+    kp_hip = clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
+    kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
     v_cmd = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
     l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
 
@@ -62,7 +60,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Simulation time and velocity profile
 %     persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
-%     v_cmd = (T > 1)*1.5*sign(sin(2*T/pi));
+%     v_cmd = 1.2*sign(sin(T/pi));
     
     % Persistent variable to keep track of current stance leg
     persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
@@ -99,7 +97,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     %% HIP CONTROLLER =====================================================
 
     % Hip target position to counteract boom rotation
-    q0_hip = (-q(11) + 0.1271);
+    q0_hip = (0.1*[-stanceLeg; stanceLeg] - q(11) + 0.1271);
 
     % Hip target velocity
     dq0_hip = zeros(2,1);
@@ -143,8 +141,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         if isStand
             % Step length is proportional to current velocity and error
             l_step = clamp(...
-                k1*dx - ... % 0.2
-                clamp(k2*(v_tgt - dx), -0.1, 0.1) - ... % 0.4
+                0.2*dx - ...
+                clamp(0.4*(v_tgt - dx), -0.1, 0.1) - ...
                 x_st, -0.5, 0.5);
             
             % Set leg swing trigger point
@@ -225,20 +223,25 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
             x_st_e = x_sw;
             x_sw_e = x_st;
 
-            % TODO
+            % Check standing speed or direction flip of commanded velocity
             if abs(v_cmd) < 0.75 || sign(v_cmd) ~= sign(dx)
-                if abs(dx) > 1 && isStand == false
+                % Walk slower
+                if abs(dx) > 1 && ~isStand
                     v_tgt = sign(dx)*0.75;
-                    isStand = false;
+                % Stand
                 else
-                    v_tgt = sign(v_cmd)*0.1; % Eventually this should go away and it should handle all speeds under 0.75
+                    v_tgt = sign(v_cmd)*0.25;
                     isStand = true;
                 end % if
             else
+                % Walk normal
                 v_tgt = v_cmd;
                 isStand = false;
             end % if
         end % if
+        
+        % Error catch for falling backwards
+        if abs(dx) < 0.01; isStand = true; end % if
 
         % User outputs
         userOut = dx;
