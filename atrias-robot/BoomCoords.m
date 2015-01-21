@@ -14,7 +14,9 @@ classdef BoomCoords < handle
 			yaw_vec = [[1, -1, 1, -1] * orient.^2; 2*(orient(1)*orient(4) - orient(2)*orient(3))] / cos(roll);
 
 			% Perform the yaw update
-			yawTheta = atan2(dot(yaw_vec, [-sin(this.yaw); -cos(this.yaw)]), dot(yaw_vec, [cos(this.yaw); -sin(this.yaw)]));
+			yaw_vec = [ cos(this.yaw) -sin(this.yaw)
+			            sin(this.yaw)  cos(this.yaw) ] * yaw_vec;
+			yawTheta = atan2(yaw_vec(1), yaw_vec(2));
 			this.yaw = this.yaw + yawTheta;
 
 			% Set the final yaw output
@@ -34,10 +36,8 @@ classdef BoomCoords < handle
 			% Save some offsets to match closely with the boom's angles themselves.
 			if this.prevState == IMUSysState.ALIGN
 				this.rollOff  = boomRoll - roll;
-				this.yawOff   = boomYaw   - yaw;
 			end
 			roll  = roll + this.rollOff;
-			yaw   = yaw   + this.yawOff;
 			this.prevState = state;
 		end
 	end
@@ -46,6 +46,5 @@ classdef BoomCoords < handle
 		prevState = IMUSysState.INIT
 		yaw = 0
 		rollOff = 0
-		yawOff   = 0
 	end
 end
