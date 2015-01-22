@@ -24,6 +24,12 @@ classdef IMUSys < handle
 
 		% This waits until align_reset_wait cycles of zero motion before attempting to align.
 		function init(this, gyros, accels)
+			% Throw out the first sample
+			if ~this.has_data
+				this.has_data = true;
+				return
+			end
+
 			% Make sure the robot's stationary before beginning or re-trying alignment
 			if this.checkMotion(gyros, accels)
 				this.fail_reas           = IMUFailReason.MOTION;
@@ -31,10 +37,13 @@ classdef IMUSys < handle
 			else
 				this.align_reset_counter = this.align_reset_counter + 1; % We're stationary, continue (or begin) counting
 
+				% Show that we've stopped detecting motion.
+				this.fail_reas = IMUFailReason.NONE;
+
 				% Switch to align if it's been long enough
 				if this.align_reset_counter >= this.align_reset_wait
-					this.fail_reas = IMUFailReason.NONE;
 					this.state     = IMUSysState.ALIGN;
+					this.align_ticks = 0;
 				end
 			end
 		end
@@ -240,6 +249,10 @@ classdef IMUSys < handle
 
 		% Explanation for an alignment failure
 		fail_reas = IMUFailReason.NONE
+
+		% Whether or not we've gotten data yet. Used for throwing
+		% out the first IMU packet, which usually contains a spike.
+		has_data = false;
 
 		% The current orientation of the IMU coordinate frame (Quat)
 		imu_orient

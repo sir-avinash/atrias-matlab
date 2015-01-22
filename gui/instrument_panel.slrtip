@@ -1293,7 +1293,7 @@
         <Object type="MW.Instruments.NumericDisplay, mwio, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null" name="NumericDisplay219" children="Controls">
           <Property name="BindingSrcType">Signal</Property>
           <Property name="OutputValue">0</Property>
-          <Property name="BindingSrcPath">IMU/p11</Property>
+          <Property name="BindingSrcPath">IMU/imu_sys/p7</Property>
           <Property name="BindingSrcObject" />
           <Property name="TargetName">TargetPC1</Property>
           <Property name="TextFormatting">
@@ -1329,7 +1329,7 @@
           <Property name="OutputValue">0</Property>
           <Property name="BindingSrcObject" />
           <Property name="BindingSrcType">Signal</Property>
-          <Property name="BindingSrcPath">IMU/p10</Property>
+          <Property name="BindingSrcPath">IMU/imu_sys/p6</Property>
           <Property name="TargetName">TargetPC1</Property>
           <Property name="Size">24, 24</Property>
           <Property name="Location">100, 91</Property>
@@ -1339,7 +1339,7 @@
           <Property name="OutputValue">0</Property>
           <Property name="BindingSrcObject" />
           <Property name="BindingSrcType">Signal</Property>
-          <Property name="BindingSrcPath">IMU/p9</Property>
+          <Property name="BindingSrcPath">IMU/imu_sys/p5</Property>
           <Property name="TargetName">TargetPC1</Property>
           <Property name="Size">24, 24</Property>
           <Property name="Location">100, 67</Property>
@@ -1349,7 +1349,7 @@
           <Property name="OutputValue">0</Property>
           <Property name="BindingSrcObject" />
           <Property name="BindingSrcType">Signal</Property>
-          <Property name="BindingSrcPath">IMU/p8</Property>
+          <Property name="BindingSrcPath">IMU/imu_sys/p4</Property>
           <Property name="TargetName">TargetPC1</Property>
           <Property name="Size">24, 24</Property>
           <Property name="Location">100, 43</Property>
@@ -1359,7 +1359,7 @@
           <Property name="OutputValue">0</Property>
           <Property name="BindingSrcObject" />
           <Property name="BindingSrcType">Signal</Property>
-          <Property name="BindingSrcPath">IMU/p7</Property>
+          <Property name="BindingSrcPath">IMU/imu_sys/p3</Property>
           <Property name="TargetName">TargetPC1</Property>
           <Property name="Size">24, 24</Property>
           <Property name="Location">100, 19</Property>
