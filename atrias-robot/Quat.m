@@ -1,4 +1,3 @@
-% Time: 131.585
 classdef Quat
 	methods
 		% Basic constructor. Can construct by giving the 4 values or by giving a rotation
@@ -7,7 +6,13 @@ classdef Quat
 			switch numel(vec)
 				case 3
 					angle = norm(vec);
-					this.vals = [cos(angle/2); sin(angle/2) * vec(:) / angle];
+
+					% Check for a zero rotation angle to avoid a divide by zero
+					if angle > 0
+						this.vals = [cos(angle/2); sin(angle/2) * vec(:) / angle];
+					else
+						this.vals = [1; 0; 0; 0];
+					end
 
 				case 4
 					this.vals = vec(:);

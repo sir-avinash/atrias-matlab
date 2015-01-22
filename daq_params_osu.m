@@ -10,9 +10,6 @@
 %   leg = shin/thigh encoders
 %   trans = motor encoders
 
-% Location dependent values
-latitude = 44.5673031 * pi/180; % The DRL's latitude (in radians), according to Google Maps
-
 % Update rates
 update_freq = 1000; %Hz
 sample_time = 1/update_freq; % seconds
@@ -131,11 +128,3 @@ INC_ENC_DIRS         = -[ LEG1_MOTOR_A_DIRECTION
                           LEG2_MOTOR_A_DIRECTION
                           LEG2_MOTOR_B_DIRECTION ];
 MEDULLA_TIMER_FREQ = 32e6;
-
-% IMU parameters
-align_time_ms   = 3 * 60 * 1000;      % Alignment time, in milliseconds
-align_gyro_tol  = 1e-6;               % Angular rate at which the alignment will fail.       Units: radians per millisecond
-align_accel_tol = .02;                % Acceleration error at which the alignment will fail. Units: g
-align_bias_tol  = 2e-8;               % Tolerance on the gyro bias. Radians per millisecond
-earth_rot_rate  = 7.292115e-5 * .001; % Earth's rotation rate, rad/millisecond. From WolframAlpha
-boomRollOffset  = 0.127;              % Angle between the physical boom and the virtual boom. Units: radians

@@ -1,6 +1,6 @@
 classdef BoomCoords < handle
 	methods
-		function [roll,pitch,yaw,droll,dpitch,dyaw] = update(this, imu_orient, local_orient, ang_vel, state, boomRoll, boomPitch, boomYaw)
+		function [roll,pitch,yaw,droll,dpitch,dyaw] = update(this, local_orient, ang_vel)
 			% Get the local orientation quaternion as 4 real numbers
 			orient = local_orient.getVals;
 
@@ -32,19 +32,12 @@ classdef BoomCoords < handle
 			droll = jvels(1);
 			dpitch = jvels(2);
 			dyaw   = jvels(3);
-
-			% Save some offsets to match closely with the boom's angles themselves.
-			if this.prevState == IMUSysState.ALIGN
-				this.rollOff  = boomRoll - roll;
-			end
-			roll  = roll + this.rollOff;
-			this.prevState = state;
+			roll  = roll + this.boomRollOffset;
 		end
 	end
 
 	properties
-		prevState = IMUSysState.INIT
 		yaw = 0
-		rollOff = 0
+		boomRollOffset  = 0.127      % Angle between the physical boom and the virtual boom. Units: radians
 	end
 end
