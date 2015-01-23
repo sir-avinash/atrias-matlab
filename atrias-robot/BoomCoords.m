@@ -24,9 +24,9 @@ classdef BoomCoords < handle
 
 			% The angular velocity in IMU coordinates is a linear function of the individual joint
 			% velocities. This is the inverse function.
-			jvels = [ cos(yaw),           -sin(yaw),            0
-			          sin(yaw)/cos(roll),  cos(yaw)/cos(roll),  0
-			          sin(yaw)*tan(roll),  cos(yaw)*tan(roll), -1 ] * ang_vel;
+			jvels = [ sin(yaw),           cos(yaw),            0
+			         -cos(yaw)/cos(roll), sin(yaw)/cos(roll),  0
+			         -cos(yaw)*tan(roll), sin(yaw)*tan(roll), -1 ] * ang_vel;
 
 			% Grab the joint rates from the linear equation solution
 			droll = jvels(1);
