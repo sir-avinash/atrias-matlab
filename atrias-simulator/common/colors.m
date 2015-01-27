@@ -21,3 +21,4 @@ boom_color_d = lighter_gray;
 yshaft_color_d = light_gray;
 base_color_d = black;
 floor_color_d = light_blue;
+foot_color_d = orange;

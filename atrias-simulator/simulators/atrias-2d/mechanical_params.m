@@ -188,18 +188,18 @@ k_gy = m_total*g/0.005; % [N/m]
 v_gy_max = 0.03; %[m/s]
 
 % Horizontal ground interaction stiffness
-k_gx = m_total*g/0.01; % [N/m]
+k_gx = m_total*g/0.005; % [N/m]
 
 % Maximum horizontal ground relaxation speed
 v_gx_max = 0.03; %[m/s]
 
 % Stiction coefficient
-mu_stick = 1.00;
+mu_stick = 0.9;
 
 % Sliding coefficient
-mu_slide = 0.95;
+mu_slide = 0.8;
 
-% Slip-stic transition velocity
+% Slip-stick transition velocity
 vLimit = 0.01; %[m/s]
 
 % Ground height

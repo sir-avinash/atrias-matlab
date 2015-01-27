@@ -69,6 +69,17 @@ com_lowerleg = [0 -0.1513 0];
 m_lowerleg = 0.4438;
 i_lowerleg_moments = [0.01 0 0.01];
 i_lowerleg_products = [0 0 0];
+l_lowerleg = 0.49;
+
+% Foot
+d_foot_point_front = [0.06350 -0.02515 0];
+d_foot_point_back = [-0.06350 -0.02515 0];
+m_foot = 0.0857;
+com_foot = [0 -0.00959 0];
+i_foot_moments = [0.00001 0.00006 0.00006];
+i_foot_products = [0 0 0];
+ankle_stiffness = 1/2*pi;
+ankle_equilibrium = 25*pi/180;
 
 % Four Bar Link
 com_fblink = [0 -0.1137 0];
@@ -167,7 +178,7 @@ shin_initial_l = initial_l_leg_angle + acos(initial_l_leg_length);
 v_thigh_initial_r =  0;
 v_shin_initial_r =  0;
 
-initial_com_height = d_com + initial_r_leg_length;
+initial_com_height = d_com + initial_r_leg_length + 0.02;
 initial_torso_yaw = 0*pi/180;
 initial_torso_pitch = 0*pi/180;
 initial_torso_roll = 0*pi/180;
@@ -184,16 +195,16 @@ k_gy = m_total*g/0.005; % [N/m]
 v_gy_max = 0.03; %[m/s]
 
 % Horizontal ground interaction stiffness
-k_gx = m_total*g/0.01; % [N/m]
+k_gx = m_total*g/0.005; % [N/m]
 
 % Maximum horizontal ground relaxation speed
 v_gx_max = 0.03; %[m/s]
 
 % Stiction coefficient
-mu_stick = 1.00;
+mu_stick = 0.9;
 
 % Sliding coefficient
-mu_slide = 0.95;
+mu_slide = 0.8;
 
 % Slip-stic transition velocity
 vLimit = 0.01; %[m/s]
