@@ -1317,7 +1317,7 @@
         </Object>
         <Object type="System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" name="Label140" children="Controls">
           <Property name="TextAlign">MiddleLeft</Property>
-          <Property name="Text">Failed align</Property>
+          <Property name="Text">Failed</Property>
           <Property name="UseCompatibleTextRendering">True</Property>
           <Property name="Font">Segoe UI, 8pt, style=Bold</Property>
           <Property name="ForeColor">Black</Property>
