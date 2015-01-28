@@ -228,7 +228,7 @@ classdef IMUSys < handle
 		align_reset_wait       % The number of cycles to wait between the last robot motion and re-trying a failed alignment. Calculated in the constructor
 		align_time_ms   = 5 * 1000;           % Alignment time, in milliseconds
 		earth_rot_rate  = 7.292115e-5 * .001; % Earth's rotation rate, rad/millisecond. From WolframAlpha
-		missed_seq_tol  = 1    % The number of cycles (sequence counter updates) we'll tolerate missing.
+		missed_seq_tol  = 10   % The number of cycles (sequence counter updates) we'll tolerate missing.
 		nom_status      = 119  % The nominal status byte value for the IMU
 		sample_time
 
