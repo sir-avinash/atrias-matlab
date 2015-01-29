@@ -196,7 +196,7 @@ classdef IMUSys < handle
 			% IMU BIT result check
 			if status ~= this.nom_status
 				this.fail_reas = IMUFailReason.HUH9;
-				return
+				%return
 			end
 
 			% Every check passed! The data seems valid.
