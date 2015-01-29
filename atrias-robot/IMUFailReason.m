@@ -5,5 +5,10 @@ classdef IMUFailReason < uint8
 		BAD_GACCEL(2) % The gravitational acceleration's direction was unexpected (upside-down robot?).
 		WATCHDOG(3)   % The data from the IMU stopped updating
 		IMU_STATUS(4) % The IMU's built in test thinks the IMU is broken. This could be *very bad*
+        HUH5(5)
+        HUH6(6)
+        HUH7(7)
+        HUH8(8)
+        HUH9(9)
 	end
 end
