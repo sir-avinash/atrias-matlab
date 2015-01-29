@@ -165,13 +165,52 @@ classdef IMUSys < handle
 			this.imu_orient = Quat(gyros_world) * this.imu_orient;
 		end
 
+		% Function to check if the data seems valid or not...
+		% Should be only called once per iteration
+		function is_valid = checkValidity(this, gyros, accels, seq, status)
+			% Assume it's bad. We'll change this if all checks are good
+			is_valid = false;
+
+			% Check gyro magnitudes
+			if any(abs(gyros) >= 420 * pi / 180 * this.sample_time)
+				return
+			end
+
+			% Check accelerometer magnitudes
+			if any(abs(accels) >= 12)
+				return
+			end
+
+			% Check for nonfinite gyro or accelerometer values
+			if any(~isfinite(gyros)) || any(~isfinite(accels))
+				return
+			end
+
+			% Check for a properly increasing sequence counter
+			dseq = mod(seq - this.prevSeq, 128);
+			if dseq ~= 1 && dseq ~= 2
+				return
+			end
+
+			% IMU BIT result check
+			if status ~= this.nom_status
+				return
+			end
+
+			% Update our stored values for the next iteration
+			this.prevSeq = seq;
+
+			% Every check passed! The data seems valid.
+			is_valid = true;
+		end
+
 		% The main IMU update loop; contains a state machine to handle alignment
 		% ang_vel is in IMU coordinates!
 		function [local_orient, ang_vel, state, fail_reas] = ...
 			update(this, gyros, accels, seq, status, latitude, heading)
 		%
 			% Run the state machine iff we have new data
-			if seq ~= this.prevSeq
+			if this.checkValidity(gyros, accels, seq, status)
 				switch this.state
 					case IMUSysState.INIT
 						this.init(gyros(:), accels(:))
@@ -183,18 +222,9 @@ classdef IMUSys < handle
 						this.run(gyros(:), seq)
 				end
 
-				% Update our stored values for the next iteration
-				this.prevSeq = seq;
-
 				% Update the missed sequence counter with this new information
 				if this.missed_seq_cntr > 0
 					this.missed_seq_cntr = this.missed_seq_cntr - 1;
-				end
-
-				% IMU integrity checking
-				if status ~= this.nom_status
-					this.fail_reas = IMUFailReason.IMU_STATUS;
-					this.state     = IMUSysState.FAIL;
 				end
 			else
 				% No new data this cycle. If we've previously gotten new data, this is an error.
