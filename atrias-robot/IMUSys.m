@@ -170,34 +170,34 @@ classdef IMUSys < handle
 
 			% Check gyro magnitudes
 			if any(abs(gyros) >= 420 * pi / 180 * this.sample_time)
-                this.fail_reas = IMUFailReason.HUH5;
+				this.fail_reas = IMUFailReason.HUH5;
 				return
 			end
 
 			% Check accelerometer magnitudes
 			if any(abs(accels) >= 12)
-                this.fail_reas = IMUFailReason.HUH6;
+				this.fail_reas = IMUFailReason.HUH6;
 				return
 			end
 
 			% Check for nonfinite gyro or accelerometer values
 			if any(~isfinite(gyros)) || any(~isfinite(accels))
-                this.fail_reas = IMUFailReason.HUH7;
+				this.fail_reas = IMUFailReason.HUH7;
 				return
 			end
 
 			% Check for a properly increasing sequence counter
 			%dseq = mod(int16(seq) - int16(this.prevSeq), int16(128));
 			if dseq == 0
-                this.fail_reas = IMUFailReason.HUH8;
+				this.fail_reas = IMUFailReason.HUH8;
 				return
 			end
 
 			% IMU BIT result check
 			if status ~= this.nom_status
-                this.fail_reas = IMUFailReason.HUH9;
+				this.fail_reas = IMUFailReason.HUH9;
 				return
-            end
+			end
 
 			% Every check passed! The data seems valid.
 			is_valid = true;
@@ -208,9 +208,9 @@ classdef IMUSys < handle
 		function [local_orient, ang_vel, state, fail_reas] = ...
 			update(this, gyros, accels, seq, status, latitude, heading)
 		%
-            % Compute the size of the seq increment (note that seq wraps modulo 128).
+			% Compute the size of the seq increment (note that seq wraps modulo 128).
 			dseq = mod(int16(seq) - int16(this.prevSeq), int16(128));
-            this.prevSeq = seq;
+			this.prevSeq = seq;
 
 			% Run the state machine iff we have new data
 			if this.checkValidity(gyros, accels, dseq, status)
