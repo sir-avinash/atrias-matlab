@@ -163,44 +163,39 @@ classdef IMUSys < handle
 		end
 
 		% Function to check if the data seems valid or not...
-		% Should be only called once per iteration
-		function is_valid = checkValidity(this, gyros, accels, dseq, status)
-			% Assume it's bad. We'll change this if all checks are good
-			is_valid = false;
+		function fail_reas = checkValidity(this, gyros, accels, dseq, status)
+			% Assume it's good. We'll change this later if we find that the data was actually bad
+			fail_reas = IMUFailReason.NONE;
 
 			% Check gyro magnitudes
-			if any(abs(gyros) >= 420 * pi / 180 * this.sample_time)
-				this.fail_reas = IMUFailReason.HUH5;
+			if any(abs(gyros) >= this.max_gyro_rate * this.sample_time)
+				fail_reas = IMUFailReason.GYRO_MAG;
 				return
 			end
 
 			% Check accelerometer magnitudes
-			if any(abs(accels) >= 12)
-				this.fail_reas = IMUFailReason.HUH6;
+			if any(abs(accels) >= this.max_accel)
+				fail_reas = IMUFailReason.ACCEL_MAG;
 				return
 			end
 
 			% Check for nonfinite gyro or accelerometer values
 			if any(~isfinite(gyros)) || any(~isfinite(accels))
-				this.fail_reas = IMUFailReason.HUH7;
+				fail_reas = IMUFailReason.NOTFINITE;
 				return
 			end
 
 			% Check for a properly increasing sequence counter
-			%dseq = mod(int16(seq) - int16(this.prevSeq), int16(128));
-			if dseq == 0
-				this.fail_reas = IMUFailReason.HUH8;
+			if dseq ~= 1
+				fail_reas = IMUFailReason.WATCHDOG;
 				return
 			end
 
 			% IMU BIT result check
 			if status ~= this.nom_status
-				this.fail_reas = IMUFailReason.HUH9;
-				%return
+				fail_reas = IMUFailReason.IMU_STATUS;
+				return
 			end
-
-			% Every check passed! The data seems valid.
-			is_valid = true;
 		end
 
 		% The main IMU update loop; contains a state machine to handle alignment
@@ -212,8 +207,13 @@ classdef IMUSys < handle
 			dseq = mod(int16(seq) - int16(this.prevSeq), int16(128));
 			this.prevSeq = seq;
 
-			% Run the state machine iff we have new data
-			if this.checkValidity(gyros, accels, dseq, status)
+			% If we have yet to fail, do our integrity checks.
+			if this.state ~= IMUSysState.FAIL
+				this.fail_reas = this.checkValidity(gyros, accels, dseq, status);
+			end
+
+			% Run the state machine iff we have new, valid data
+			if this.fail_reas == IMUFailReason.NONE
 				switch this.state
 					case IMUSysState.INIT
 						this.init(gyros(:), accels(:))
@@ -226,8 +226,8 @@ classdef IMUSys < handle
 				end
 
 				% Update the missed sequence counter with this new information
-				if this.missed_seq_cntr > 0
-					this.missed_seq_cntr = this.missed_seq_cntr - 1;
+				if this.bad_data_cntr > 0
+					this.bad_data_cntr = this.bad_data_cntr - 1;
 				end
 			else
 				% No new data this cycle. If we've previously gotten new data, this is an error.
@@ -235,13 +235,12 @@ classdef IMUSys < handle
 				% First, ignore the case where we have not yet gotten new IMU data or have already failed
 				if this.state == IMUSysState.ALIGN || this.state == IMUSysState.RUN
 					% Record the missed sequence
-					this.missed_seq_cntr = this.missed_seq_cntr + 1;
+					this.bad_data_cntr = this.bad_data_cntr + 1;
 
 					% Check if this surpasses our missed sequence tolerance
-					if this.missed_seq_cntr > this.missed_seq_tol
+					if this.bad_data_cntr > this.bad_data_tol
 						% Uh oh... watchdog failure. Fail and indicate the failure reason
-						this.state     = IMUSysState.FAIL;
-						%this.fail_reas = IMUFailReason.WATCHDOG;
+						this.state = IMUSysState.FAIL;
 					end
 				end
 			end
@@ -261,7 +260,9 @@ classdef IMUSys < handle
 		align_reset_wait       % The number of cycles to wait between the last robot motion and re-trying a failed alignment. Calculated in the constructor
 		align_time_ms   = 5 * 1000;           % Alignment time, in milliseconds
 		earth_rot_rate  = 7.292115e-5 * .001; % Earth's rotation rate, rad/millisecond. From WolframAlpha
-		missed_seq_tol  = 10   % The number of cycles (sequence counter updates) we'll tolerate missing.
+		bad_data_tol    = 10                  % The number of cycles (sequence counter updates) we'll tolerate missing.
+		max_gyro_rate   = 490 * pi/180; % The maximum gyro input rate, rad/s
+		max_accel       = 10;           % The accelerometers's maximum input, Gs
 		nom_status      = 119  % The nominal status byte value for the IMU
 		sample_time
 
@@ -293,8 +294,8 @@ classdef IMUSys < handle
 		% Similarly, the orientation of the ATRIAS coordinate frame in the IMU frame
 		local_rel_imu
 
-		% A counter which records missed sequences; used for a watchdog.
-		missed_seq_cntr = uint8(0)
+		% A counter which records bad data; used for the watchdog and data integrity functionality
+		bad_data_cntr = uint8(0)
 
 		% Previous sequence value; kept to detect when new data is available and
 		% to begin alignment at the correct time.
