@@ -83,7 +83,7 @@ classdef IMUSys < handle
 				return
 			end
 
-			this.align_step2(heading)
+			this.imu_orient = imu.align_corrhdg(this.imu_orient, heading);
 
 			% No need to re-check here, as align_step2 has no failure modes
 
@@ -94,18 +94,6 @@ classdef IMUSys < handle
 			% Alignment was successful!
 			% Set the state for the next iteration.
 			this.state = imu.IMUSysState.RUN;
-		end
-
-		% Step 2 of the alignment process (heading)
-		function align_step2(this, heading)
-			% Rotate the IMU's Z vector into world coordinates
-			imuZ_world = this.imu_orient.rot([0; 0; 1]);
-
-			% Compute the rotation angle for the correction
-			theta = atan2(imuZ_world(2), -imuZ_world(1)) - heading;
-
-			% Perform the update
-			this.imu_orient = imu.Quat(theta * [0; 0; 1]) * this.imu_orient;
 		end
 
 		% Step 3 of the alignment process (earth rotation and bias)
