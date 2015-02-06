@@ -76,7 +76,7 @@ classdef IMUSys < handle
 			% Run through the alignment steps. Check for errors in between each step and terminate if an error was found.
 			% For simplicity, we'll set the FAIL state here so that an alignment step only needs to set fail_reas to signal an error
 
-			this.align_step1
+			[this.imu_orient, this.fail_reas] = imu.align_lvl(this.imu_orient, this.align_gm);
 
 			if this.fail_reas ~= imu.IMUFailReason.NONE
 				this.state = imu.IMUSysState.FAIL;
@@ -94,39 +94,6 @@ classdef IMUSys < handle
 			% Alignment was successful!
 			% Set the state for the next iteration.
 			this.state = imu.IMUSysState.RUN;
-		end
-
-		% Step 1 of the alignment process (leveling)
-		function align_step1(this)
-			% First, rotate the acceleration vector using the previous-known IMU orientation.
-			ghat = this.imu_orient.rot(this.align_gm);
-
-			% Next, normalize the accumulated acceleration vector
-			u_g = ghat / norm(ghat);
-
-			% If a correction greater than (or equal to) 90 degrees is necessary, fail.
-			% (robot upside down?)
-			if u_g(3) <= 0
-				this.fail_reas = imu.IMUFailReason.BAD_GACCEL;
-				return
-			end
-
-			% Use a cross product to compute the rotation axis for the
-			% orientation correction. This will have a length which is the sin
-			% of the necessary correction rotation angle.
-			a = cross(u_g, [0; 0; 1]);
-
-			% Catch the (rare!) case where no correction is necessary.
-			if all(a == 0)
-				return
-			end
-
-			% Turn the previous cross product into a true axis and angle
-			theta = asin(norm(a));
-			axis  = a / norm(a);
-
-			% Apply the correction to the orientation
-			this.imu_orient = imu.Quat(theta * axis) * this.imu_orient;
 		end
 
 		% Step 2 of the alignment process (heading)
