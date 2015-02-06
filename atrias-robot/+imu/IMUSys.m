@@ -87,19 +87,13 @@ classdef IMUSys < handle
 
 			% No need to re-check here, as align_step2 has no failure modes
 
-			this.align_step3(latitude)
+			this.earth_rot = imu.align_biases(this.earth_rot_rate, latitude);
 
 			% Again, align_step3 has no failure modes
 
 			% Alignment was successful!
 			% Set the state for the next iteration.
 			this.state = imu.IMUSysState.RUN;
-		end
-
-		% Step 3 of the alignment process (earth rotation and bias)
-		function align_step3(this, latitude)
-			% Compute the Earth's rotation vector for rotation cancellation
-			this.earth_rot = this.earth_rot_rate * [0; cos(latitude); sin(latitude)];
 		end
 
 		% Main IMU operation state.
