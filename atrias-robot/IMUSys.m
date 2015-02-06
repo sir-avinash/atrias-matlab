@@ -24,9 +24,12 @@ classdef IMUSys < handle
 
 		% This waits until align_reset_wait cycles of zero motion before attempting to align.
 		function init(this, gyros, accels)
-			% Throw out the first sample
+			% Throw out the first samples (until they stabilize; the first few samples are often very large).
 			if ~this.has_data
-				this.has_data = true;
+				if ~this.checkMotion(gyros, accels)
+					this.has_data = true;
+				end
+
 				return
 			end
 
