@@ -3,7 +3,7 @@ classdef IMUSys < handle
 		% Constructor -- does some basic init that can't directly be done to the properties themselves
 		function this = IMUSys(sample_time)
 			% This IMU is two simple rotations away from the local orientation.
-			imu_rel_local      = Quat([0; pi/4; 0]) * Quat([-pi/2; 0; 0]);
+			imu_rel_local      = imu.Quat([0; pi/4; 0]) * imu.Quat([-pi/2; 0; 0]);
 			this.local_rel_imu = imu_rel_local.conj();
 
 			% The local orientation is initially equal to the world orientation.
@@ -35,17 +35,17 @@ classdef IMUSys < handle
 
 			% Make sure the robot's stationary before beginning or re-trying alignment
 			if this.checkMotion(gyros, accels)
-				this.fail_reas           = IMUFailReason.MOTION;
+				this.fail_reas           = imu.IMUFailReason.MOTION;
 				this.align_reset_counter = 0; % We're moving; reset the timer
 			else
 				this.align_reset_counter = this.align_reset_counter + 1; % We're stationary, continue (or begin) counting
 
 				% Show that we've stopped detecting motion.
-				this.fail_reas = IMUFailReason.NONE;
+				this.fail_reas = imu.IMUFailReason.NONE;
 
 				% Switch to align if it's been long enough
 				if this.align_reset_counter >= this.align_reset_wait
-					this.state     = IMUSysState.ALIGN;
+					this.state     = imu.IMUSysState.ALIGN;
 					this.align_ticks = 0;
 				end
 			end
@@ -59,9 +59,9 @@ classdef IMUSys < handle
 			% If the gyros or accelerometers read something too large,
 			% terminate alignment and indicate the error
 			if this.checkMotion(gyros, accels)
-				this.state               = IMUSysState.INIT;
+				this.state               = imu.IMUSysState.INIT;
 				this.align_reset_counter = 0;
-				this.fail_reas           = IMUFailReason.MOTION;
+				this.fail_reas           = imu.IMUFailReason.MOTION;
 				return
 			end
 
@@ -78,8 +78,8 @@ classdef IMUSys < handle
 
 			this.align_step1
 
-			if this.fail_reas ~= IMUFailReason.NONE
-				this.state = IMUSysState.FAIL;
+			if this.fail_reas ~= imu.IMUFailReason.NONE
+				this.state = imu.IMUSysState.FAIL;
 				return
 			end
 
@@ -93,7 +93,7 @@ classdef IMUSys < handle
 
 			% Alignment was successful!
 			% Set the state for the next iteration.
-			this.state = IMUSysState.RUN;
+			this.state = imu.IMUSysState.RUN;
 		end
 
 		% Step 1 of the alignment process (leveling)
@@ -107,7 +107,7 @@ classdef IMUSys < handle
 			% If a correction greater than (or equal to) 90 degrees is necessary, fail.
 			% (robot upside down?)
 			if u_g(3) <= 0
-				this.fail_reas = IMUFailReason.BAD_GACCEL;
+				this.fail_reas = imu.IMUFailReason.BAD_GACCEL;
 				return
 			end
 
@@ -126,7 +126,7 @@ classdef IMUSys < handle
 			axis  = a / norm(a);
 
 			% Apply the correction to the orientation
-			this.imu_orient = Quat(theta * axis) * this.imu_orient;
+			this.imu_orient = imu.Quat(theta * axis) * this.imu_orient;
 		end
 
 		% Step 2 of the alignment process (heading)
@@ -138,7 +138,7 @@ classdef IMUSys < handle
 			theta = atan2(imuZ_world(2), -imuZ_world(1)) - heading;
 
 			% Perform the update
-			this.imu_orient = Quat(theta * [0; 0; 1]) * this.imu_orient;
+			this.imu_orient = imu.Quat(theta * [0; 0; 1]) * this.imu_orient;
 		end
 
 		% Step 3 of the alignment process (earth rotation and bias)
@@ -162,41 +162,41 @@ classdef IMUSys < handle
 			gyros_world = double(dseq) * gyros_world;
 
 			% Execute the update to imu_orient
-			this.imu_orient = Quat(gyros_world) * this.imu_orient;
+			this.imu_orient = imu.Quat(gyros_world) * this.imu_orient;
 		end
 
 		% Function to check if the data seems valid or not...
 		function fail_reas = checkValidity(this, gyros, accels, dseq, status)
 			% Assume it's good. We'll change this later if we find that the data was actually bad
-			fail_reas = IMUFailReason.NONE;
+			fail_reas = imu.IMUFailReason.NONE;
 
 			% Check gyro magnitudes
 			if any(abs(gyros) >= this.max_gyro_rate * this.sample_time)
-				fail_reas = IMUFailReason.GYRO_MAG;
+				fail_reas = imu.IMUFailReason.GYRO_MAG;
 				return
 			end
 
 			% Check accelerometer magnitudes
 			if any(abs(accels) >= this.max_accel)
-				fail_reas = IMUFailReason.ACCEL_MAG;
+				fail_reas = imu.IMUFailReason.ACCEL_MAG;
 				return
 			end
 
 			% Check for nonfinite gyro or accelerometer values
 			if any(~isfinite(gyros)) || any(~isfinite(accels))
-				fail_reas = IMUFailReason.NOTFINITE;
+				fail_reas = imu.IMUFailReason.NOTFINITE;
 				return
 			end
 
 			% Check for a properly increasing sequence counter
 			if dseq ~= 1
-				fail_reas = IMUFailReason.WATCHDOG;
+				fail_reas = imu.IMUFailReason.WATCHDOG;
 				return
 			end
 
 			% IMU BIT result check
 			if status ~= this.nom_status
-				fail_reas = IMUFailReason.IMU_STATUS;
+				fail_reas = imu.IMUFailReason.IMU_STATUS;
 				return
 			end
 		end
@@ -211,20 +211,20 @@ classdef IMUSys < handle
 			this.prevSeq = seq;
 
 			% If we have yet to fail, do our integrity checks.
-			if this.state ~= IMUSysState.FAIL
+			if this.state ~= imu.IMUSysState.FAIL
 				this.fail_reas = this.checkValidity(gyros, accels, dseq, status);
 			end
 
 			% Run the state machine iff we have new, valid data
-			if this.fail_reas == IMUFailReason.NONE
+			if this.fail_reas == imu.IMUFailReason.NONE
 				switch this.state
-					case IMUSysState.INIT
+					case imu.IMUSysState.INIT
 						this.init(gyros(:), accels(:))
 
-					case IMUSysState.ALIGN
+					case imu.IMUSysState.ALIGN
 						this.align(gyros(:), accels(:), latitude, heading)
 
-					case IMUSysState.RUN
+					case imu.IMUSysState.RUN
 						this.run(gyros(:), dseq)
 				end
 
@@ -236,14 +236,14 @@ classdef IMUSys < handle
 				% No new data this cycle. If we've previously gotten new data, this is an error.
 
 				% First, ignore the case where we have not yet gotten new IMU data or have already failed
-				if this.state == IMUSysState.ALIGN || this.state == IMUSysState.RUN
+				if this.state == imu.IMUSysState.ALIGN || this.state == imu.IMUSysState.RUN
 					% Record the missed sequence
 					this.bad_data_cntr = this.bad_data_cntr + 1;
 
 					% Check if this surpasses our missed sequence tolerance
 					if this.bad_data_cntr > this.bad_data_tol
 						% Uh oh... watchdog failure. Fail and indicate the failure reason
-						this.state = IMUSysState.FAIL;
+						this.state = imu.IMUSysState.FAIL;
 					end
 				end
 			end
@@ -285,7 +285,7 @@ classdef IMUSys < handle
 		earth_rot = [0; 0; 0]
 
 		% Explanation for an alignment failure
-		fail_reas = IMUFailReason.NONE
+		fail_reas = imu.IMUFailReason.NONE
 
 		% Whether or not we've gotten data yet. Used for throwing
 		% out the first IMU packet, which usually contains a spike.
@@ -305,6 +305,6 @@ classdef IMUSys < handle
 		prevSeq = uint8(0)
 
 		% Current alignment state
-		state = IMUSysState.INIT;
+		state = imu.IMUSysState.INIT;
 	end
 end % classdef
