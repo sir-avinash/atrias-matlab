@@ -17,16 +17,11 @@ classdef IMUSys < handle
 			this.align_reset_counter = this.align_reset_wait; % Switch to align on the first packet, since the robot should be stationary during model startup
 		end
 
-		% This checks if our motion is within the alignment tolerances.
-		function is_moving = checkMotion(this, gyros, accels)
-			is_moving = (norm(gyros) >= this.params.align_gyro_tol || abs(norm(accels) - 1) >= this.params.align_accel_tol);
-		end
-
 		% This waits until align_reset_wait cycles of zero motion before attempting to align.
 		function init(this, gyros, accels)
 			% Throw out the first samples (until they stabilize; the first few samples are often very large).
 			if ~this.has_data
-				if ~this.checkMotion(gyros, accels)
+				if ~imu.checkMotion(this.params, gyros, accels)
 					this.has_data = true;
 				end
 
@@ -34,7 +29,7 @@ classdef IMUSys < handle
 			end
 
 			% Make sure the robot's stationary before beginning or re-trying alignment
-			if this.checkMotion(gyros, accels)
+			if imu.checkMotion(this.params, gyros, accels)
 				this.fail_reas           = imu.IMUFailReason.MOTION;
 				this.align_reset_counter = 0; % We're moving; reset the timer
 			else
@@ -58,7 +53,7 @@ classdef IMUSys < handle
 
 			% If the gyros or accelerometers read something too large,
 			% terminate alignment and indicate the error
-			if this.checkMotion(gyros, accels)
+			if imu.checkMotion(this.params, gyros, accels)
 				this.state               = imu.IMUSysState.INIT;
 				this.align_reset_counter = 0;
 				this.fail_reas           = imu.IMUFailReason.MOTION;
