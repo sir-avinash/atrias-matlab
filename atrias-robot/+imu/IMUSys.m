@@ -19,7 +19,7 @@ classdef IMUSys < handle
 
 		% This checks if our motion is within the alignment tolerances.
 		function is_moving = checkMotion(this, gyros, accels)
-			is_moving = (norm(gyros) >= this.align_gyro_tol || abs(norm(accels) - 1) >= this.align_accel_tol);
+			is_moving = (norm(gyros) >= this.params.align_gyro_tol || abs(norm(accels) - 1) >= this.params.align_accel_tol);
 		end
 
 		% This waits until align_reset_wait cycles of zero motion before attempting to align.
@@ -66,7 +66,7 @@ classdef IMUSys < handle
 			end
 
 			% Return early if the alignment isn't done yet.
-			if this.align_ticks < this.align_time_ms
+			if this.align_ticks < this.params.align_time_ms
 				return
 			end
 
@@ -87,7 +87,7 @@ classdef IMUSys < handle
 
 			% No need to re-check here, as align_step2 has no failure modes
 
-			this.earth_rot = imu.align_biases(this.earth_rot_rate, latitude);
+			this.earth_rot = imu.align_biases(this.params.earth_rot_rate, latitude);
 
 			% Again, align_step3 has no failure modes
 
@@ -120,13 +120,13 @@ classdef IMUSys < handle
 			fail_reas = imu.IMUFailReason.NONE;
 
 			% Check gyro magnitudes
-			if any(abs(gyros) >= this.max_gyro_rate * this.sample_time)
+			if any(abs(gyros) >= this.params.max_gyro_rate * this.sample_time)
 				fail_reas = imu.IMUFailReason.GYRO_MAG;
 				return
 			end
 
 			% Check accelerometer magnitudes
-			if any(abs(accels) >= this.max_accel)
+			if any(abs(accels) >= this.params.max_accel)
 				fail_reas = imu.IMUFailReason.ACCEL_MAG;
 				return
 			end
@@ -144,7 +144,7 @@ classdef IMUSys < handle
 			end
 
 			% IMU BIT result check
-			if status ~= this.nom_status
+			if status ~= this.params.nom_status
 				fail_reas = imu.IMUFailReason.IMU_STATUS;
 				return
 			end
@@ -190,7 +190,7 @@ classdef IMUSys < handle
 					this.bad_data_cntr = this.bad_data_cntr + 1;
 
 					% Check if this surpasses our missed sequence tolerance
-					if this.bad_data_cntr > this.bad_data_tol
+					if this.bad_data_cntr > this.params.bad_data_tol
 						% Uh oh... watchdog failure. Fail and indicate the failure reason
 						this.state = imu.IMUSysState.FAIL;
 					end
@@ -206,16 +206,9 @@ classdef IMUSys < handle
 	end
 
 	properties
-		% Various parameters and constants
-		align_gyro_tol  = 1e-6 % Motion tolerance during alignment, rads/millisecond
-		align_accel_tol = .02  % Motion tolerance during alignment, Gs
-		align_reset_wait       % The number of cycles to wait between the last robot motion and re-trying a failed alignment. Calculated in the constructor
-		align_time_ms   = 5 * 1000;           % Alignment time, in milliseconds
-		earth_rot_rate  = 7.292115e-5 * .001; % Earth's rotation rate, rad/millisecond. From WolframAlpha
-		bad_data_tol    = 10                  % The number of cycles (sequence counter updates) we'll tolerate missing.
-		max_gyro_rate   = 490 * pi/180; % The maximum gyro input rate, rad/s
-		max_accel       = 10;           % The accelerometers's maximum input, Gs
-		nom_status      = 119  % The nominal status byte value for the IMU
+		% Parameters
+		align_reset_wait    % The number of cycles to wait between the last robot motion and re-trying a failed alignment. Calculated in the constructor
+		params = imu.IMUParams
 		sample_time
 
 		% Init state's state.
