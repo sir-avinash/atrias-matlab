@@ -3,7 +3,7 @@ classdef IMUSys < handle
 		% Constructor -- does some basic init that can't directly be done to the properties themselves
 		function this = IMUSys(sample_time)
 			% This IMU is two simple rotations away from the local orientation.
-			imu_rel_local      = imu.Quat([0; pi/4; 0]) * imu.Quat([-pi/2; 0; 0]);
+			imu_rel_local      = imu.init_imu_orient();
 			this.local_rel_imu = imu_rel_local.conj();
 
 			% The local orientation is initially equal to the world orientation.
