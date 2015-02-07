@@ -21,7 +21,7 @@ classdef IMUSys < handle
 		function init(this, gyros, accels)
 			% Throw out the first samples (until they stabilize; the first few samples are often very large).
 			if ~this.has_data
-				if ~imu.checkMotion(this.params, gyros, accels)
+				if ~imu.checkMotion(imu.IMUParams, gyros, accels)
 					this.has_data = true;
 				end
 
@@ -29,7 +29,7 @@ classdef IMUSys < handle
 			end
 
 			% Make sure the robot's stationary before beginning or re-trying alignment
-			if imu.checkMotion(this.params, gyros, accels)
+			if imu.checkMotion(imu.IMUParams, gyros, accels)
 				this.fail_reas           = imu.IMUFailReason.MOTION;
 				this.align_reset_counter = 0; % We're moving; reset the timer
 			else
@@ -50,10 +50,13 @@ classdef IMUSys < handle
 		function align(this, gyros, accels, latitude, heading)
 			this.align_gm    = this.align_gm + accels;
 			this.align_ticks = this.align_ticks + 1;
+            
+            % Temporary variable to hold our alignment parameters
+            params = imu.IMUParams;
 
 			% If the gyros or accelerometers read something too large,
 			% terminate alignment and indicate the error
-			if imu.checkMotion(this.params, gyros, accels)
+			if imu.checkMotion(params, gyros, accels)
 				this.state               = imu.IMUSysState.INIT;
 				this.align_reset_counter = 0;
 				this.fail_reas           = imu.IMUFailReason.MOTION;
@@ -61,7 +64,7 @@ classdef IMUSys < handle
 			end
 
 			% Return early if the alignment isn't done yet.
-			if this.align_ticks < this.params.align_time_ms
+			if this.align_ticks < params.align_time_ms
 				return
 			end
 
@@ -82,7 +85,7 @@ classdef IMUSys < handle
 
 			% No need to re-check here, as align_step2 has no failure modes
 
-			this.earth_rot = imu.align_biases(this.params.earth_rot_rate, latitude);
+			this.earth_rot = imu.align_biases(params.earth_rot_rate, latitude);
 
 			% Again, align_step3 has no failure modes
 
@@ -113,15 +116,18 @@ classdef IMUSys < handle
 		function fail_reas = checkValidity(this, gyros, accels, dseq, status)
 			% Assume it's good. We'll change this later if we find that the data was actually bad
 			fail_reas = imu.IMUFailReason.NONE;
+        
+            % Temporary variable to hold our alignment parameters
+            params = imu.IMUParams;
 
 			% Check gyro magnitudes
-			if any(abs(gyros) >= this.params.max_gyro_rate * this.sample_time)
+			if any(abs(gyros) >= params.max_gyro_rate * this.sample_time)
 				fail_reas = imu.IMUFailReason.GYRO_MAG;
 				return
 			end
 
 			% Check accelerometer magnitudes
-			if any(abs(accels) >= this.params.max_accel)
+			if any(abs(accels) >= params.max_accel)
 				fail_reas = imu.IMUFailReason.ACCEL_MAG;
 				return
 			end
@@ -139,7 +145,7 @@ classdef IMUSys < handle
 			end
 
 			% IMU BIT result check
-			if status ~= this.params.nom_status
+			if status ~= params.nom_status
 				fail_reas = imu.IMUFailReason.IMU_STATUS;
 				return
 			end
@@ -183,9 +189,12 @@ classdef IMUSys < handle
 				if this.state == imu.IMUSysState.ALIGN || this.state == imu.IMUSysState.RUN
 					% Record the missed sequence
 					this.bad_data_cntr = this.bad_data_cntr + 1;
+       
+                    % Temporary variable to hold our alignment parameters
+                    params = imu.IMUParams;
 
 					% Check if this surpasses our missed sequence tolerance
-					if this.bad_data_cntr > this.params.bad_data_tol
+					if this.bad_data_cntr > params.bad_data_tol
 						% Uh oh... watchdog failure. Fail and indicate the failure reason
 						this.state = imu.IMUSysState.FAIL;
 					end
@@ -202,8 +211,8 @@ classdef IMUSys < handle
 
 	properties
 		% Parameters
-		align_reset_wait    % The number of cycles to wait between the last robot motion and re-trying a failed alignment. Calculated in the constructor
-		params = imu.IMUParams
+		% The number of cycles to wait between the last robot motion and re-trying a failed alignment. Calculated in the constructor
+        align_reset_wait
 		sample_time
 
 		% Init state's state.
