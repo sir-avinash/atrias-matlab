@@ -54,4 +54,11 @@ function heading = imu_align(app, latitude)
 
 	% No error checking is necessary after step 2.
 	% This completes the alignment.
+
+	% To find the heading, we rotate the IMU's Z vector into the world frame then do some trig.
+	imuZ_world = imu_orient.rot([0; 0; 1]);
+	heading    = atan2(imuZ_world(2), -imuZ_world(1));
+
+	% Last, bring the heading into the [0, 2*pi) range (mainly to fit standard heading conventions)
+	heading = mod(heading, 2*pi);
 end
