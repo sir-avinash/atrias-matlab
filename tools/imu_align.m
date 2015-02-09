@@ -9,13 +9,13 @@
 
 function heading = imu_align(app, latitude)
 	% Pick out the necessary data
-	imu_data = app.controllerData(:, 1:7).';
+	imu_data = app.controllerData(:, 1:8).';
 	gyros    = imu_data(1:3, :);
 	accels   = imu_data(4:6, :);
-	seqs     = imu_data(7,   :);
+	statuses = imu_data(8,   :);
 
 	% Find the first sample of actual data
-	firstSmpl = min(find(seqs));
+	firstSmpl = min(find(statuses));
 
 	% Find all of the times where the robot is stationary
 	is_stationary                = ~imu.checkMotion(imu.IMUParams, gyros, accels);
@@ -34,9 +34,32 @@ function heading = imu_align(app, latitude)
 	startTick      = risings(startEdge)+1; % Find the starting time for this run; the +1 compensates for diff(is_stationary) being 1 smaller than is_stationary
 	endTick        = fallings(startEdge);  % Similarly, find the ending time.
 
+	% Throw out the first and last 10 seconds of data.
+	% This is to avoid including that motion in the alignment calculations
+	discardCycles = 10 * 1000; % 10 seconds, 1 kHz
+	startTick     = startTick + discardCycles;
+	endTick       = endTick   - discardCycles;
+
+	% Throw an error if we have no good data remaining
+	if startTick > endTick
+		error('Robot not stationary for long enough!')
+	end
+
 	% Output some nice user diagnostics
 	disp(['Found ' num2str(app.time(endTick) - app.time(startTick), '%.3f') ' seconds of stationary data beginning at time ' ...
 	      num2str(app.time(startTick), '%.3f') ' and ending at time ' num2str(app.time(endTick), '%.3f')])
+
+	% Spit out a warning if less than 3 minutes of data was given
+	minDur = 3 * 60;
+	if app.time(endTick) - app.time(startTick) < minDur
+		warning('The robot was not stationary for very long. The results may be inaccurate')
+	end
+
+	% Zero out the data from cycles where the status byte was incorrect.
+	% This further cleans the data, preventing bad readings from skewing the results
+	params = imu.IMUParams;
+	gyros(:,  statuses ~= params.nom_status) = 0;
+	accels(:, statuses ~= params.nom_status) = 0;
 
 	% Begin the actual alignment code.
 	% Here, we copy what imu.IMUSys does
