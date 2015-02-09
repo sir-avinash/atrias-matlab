@@ -1,10 +1,12 @@
+% TODO: Try re-inserting the params variable, but initialize it in the constructor.
+
 classdef IMUSys < handle
 	methods
 		% Constructor -- does some basic init that can't directly be done to the properties themselves
 		function this = IMUSys(sample_time)
 			% This IMU is two simple rotations away from the local orientation.
-			imu_rel_local      = imu.init_imu_orient();
-			this.local_rel_imu = imu_rel_local.conj();
+			imu_rel_local      = imu.init_imu_orient;
+			this.local_rel_imu = imu_rel_local.conj;
 
 			% The local orientation is initially equal to the world orientation.
 			this.imu_orient = imu_rel_local;
@@ -51,8 +53,8 @@ classdef IMUSys < handle
 			this.align_gm    = this.align_gm + accels;
 			this.align_ticks = this.align_ticks + 1;
             
-            % Temporary variable to hold our alignment parameters
-            params = imu.IMUParams;
+			% Temporary variable to hold our alignment parameters
+			params = imu.IMUParams;
 
 			% If the gyros or accelerometers read something too large,
 			% terminate alignment and indicate the error
@@ -68,7 +70,7 @@ classdef IMUSys < handle
 				return
 			end
 
-			% Alignment complete!
+			% The alignment accumulation is complete!
 
 
 			% Run through the alignment steps. Check for errors in between each step and terminate if an error was found.
@@ -117,8 +119,8 @@ classdef IMUSys < handle
 			% Assume it's good. We'll change this later if we find that the data was actually bad
 			fail_reas = imu.IMUFailReason.NONE;
         
-            % Temporary variable to hold our alignment parameters
-            params = imu.IMUParams;
+			% Temporary variable to hold our alignment parameters
+			params = imu.IMUParams;
 
 			% Check gyro magnitudes
 			if any(abs(gyros) >= params.max_gyro_rate * this.sample_time)
@@ -190,8 +192,8 @@ classdef IMUSys < handle
 					% Record the missed sequence
 					this.bad_data_cntr = this.bad_data_cntr + 1;
        
-                    % Temporary variable to hold our alignment parameters
-                    params = imu.IMUParams;
+					% Temporary variable to hold our alignment parameters
+					params = imu.IMUParams;
 
 					% Check if this surpasses our missed sequence tolerance
 					if this.bad_data_cntr > params.bad_data_tol
@@ -212,7 +214,7 @@ classdef IMUSys < handle
 	properties
 		% Parameters
 		% The number of cycles to wait between the last robot motion and re-trying a failed alignment. Calculated in the constructor
-        align_reset_wait
+		align_reset_wait
 		sample_time
 
 		% Init state's state.

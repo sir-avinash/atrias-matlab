@@ -33,4 +33,25 @@ function heading = imu_align(app, latitude)
 	[~, startEdge] = max(runlens);         % Identify the index of the longest run (or the first longest run, if there are multiple).
 	startTime      = risings(startEdge)+1; % Find the starting time for this run; the +1 compensates for diff(is_stationary) being 1 smaller than is_stationary
 	endTime        = fallings(startEdge);  % Similarly, find the ending time.
+
+	% Begin the actual alignment code.
+	% Here, we copy what imu.IMUSys does
+	imu_orient = imu.init_imu_orient;
+
+	% Integrate the data
+	align_rm = sum(gyros,  2);
+	align_gm = sum(accels, 2);
+
+	% Step 1: leveling
+	[imu_orient, fail_reas] = imu.align_lvl(imu_orient, align_gm);
+
+	if fail_reas ~= imu.IMUFailReason.NONE
+		error(['Alignment failure. Reason: ' fail_reas])
+	end
+
+	% Step 2: Heading correction via gyros
+	imu_orient = imu.align_rothdg(imu_orient, align_rm);
+
+	% No error checking is necessary after step 2.
+	% This completes the alignment.
 end
