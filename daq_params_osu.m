@@ -42,7 +42,7 @@ BOOM_PITCH_ENCODER_RAD_PER_TICK = -2*pi / (2^17 * 2); % Ticks to rad constant = 
 BOOM_ROLL_ENCODER_RAD_PER_TICK = 2*pi / (2^17 * 7); % Ticks to rad constant = rad_per_rev / (ticks_per_rev * gear_ratio)
 BOOM_YAW_ENCODER_RAD_PER_TICK = 2*pi / (2^17 * 9.6); % Ticks to rad constant = rad_per_rev / (ticks_per_rev * gear_ratio)
 RIGHT_HIP_ABS_ENCODER_RAD_PER_TICK = 2*pi / 2^13; % Ticks to rad constant = rad_per_rev / ticks_per_rev
-LEFT_HIP_ABS_ENCODER_RAD_PER_TICK = 2*pi / 2^13; % Ticks to rad constant = rad_per_rev / ticks_per_rev
+LEFT_HIP_ABS_ENCODER_RAD_PER_TICK = -2*pi / 2^13; % Ticks to rad constant = rad_per_rev / ticks_per_rev
 HIP_INC_ENCODER_RAD_PER_TICK =  2*pi / (2500 * 4 * 57);  % Ticks to rad constant = rad_per_rev / (lines_per_rev * quadrature * gear_ratio)
 RIGHT_HIP_INC_ENCODER_RAD_PER_TICK =  -HIP_INC_ENCODER_RAD_PER_TICK;
 LEFT_HIP_INC_ENCODER_RAD_PER_TICK =  HIP_INC_ENCODER_RAD_PER_TICK;
@@ -62,8 +62,8 @@ HIP_ABS_MAX_ENCODER_TICKS = 2^13 - 1; % Max value of the absolute hip encoder (1
 BOOM_MAX_ENCODER_TICKS = 2^17 - 1; % Max value of the absolute boom encoders (17-bit)
 
 % Calibrations done at OSU
-RIGHT_HIP_CALIB_VAL = 1091;  %Calibration encoder value in ticks
-LEFT_HIP_CALIB_VAL = 7192 - 2^13;   %Calibration encoder value in ticks
+RIGHT_HIP_CALIB_VAL = 1091;  % Calibration encoder value in ticks
+LEFT_HIP_CALIB_VAL = 7190;  % Calibration encoder value in ticks
 RIGHT_HIP_CALIB_POS = 0;  %Calibration angle in radians
 LEFT_HIP_CALIB_POS = 0; %Calibration angle in radians
 MTR_MAX_CURRENT = 155.0; %Maximum motor current for scaling
