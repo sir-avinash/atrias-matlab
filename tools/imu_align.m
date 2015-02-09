@@ -2,7 +2,7 @@
 %
 % Parameters:
 %     app      An instance of AtriasPostProcess with the relevant data
-%     latitude The alignment location's latitude
+%     latitude The alignment location's latitude (radians)
 %
 % Returns:
 %     heading The robot's heading, in radians.
@@ -31,16 +31,24 @@ function heading = imu_align(app, latitude)
 	fallings = find(edges < 0);            % Pick out the locations of the falling edges
 	runlens  = fallings - risings;         % The length of each run of 1's is just the difference in the corresponding rising and falling points.
 	[~, startEdge] = max(runlens);         % Identify the index of the longest run (or the first longest run, if there are multiple).
-	startTime      = risings(startEdge)+1; % Find the starting time for this run; the +1 compensates for diff(is_stationary) being 1 smaller than is_stationary
-	endTime        = fallings(startEdge);  % Similarly, find the ending time.
+	startTick      = risings(startEdge)+1; % Find the starting time for this run; the +1 compensates for diff(is_stationary) being 1 smaller than is_stationary
+	endTick        = fallings(startEdge);  % Similarly, find the ending time.
+
+	% Output some nice user diagnostics
+	disp(['Found ' num2str(app.time(endTick) - app.time(startTick), '%.3f') ' seconds of stationary data beginning at time ' ...
+	      num2str(app.time(startTick), '%.3f') ' and ending at time ' num2str(app.time(endTick), '%.3f')])
 
 	% Begin the actual alignment code.
 	% Here, we copy what imu.IMUSys does
 	imu_orient = imu.init_imu_orient;
 
 	% Integrate the data
-	align_rm = sum(gyros,  2);
-	align_gm = sum(accels, 2);
+	align_rm = sum(gyros(:, startTick:endTick),  2);
+	align_gm = sum(accels(:, startTick:endTick), 2);
+
+	% Another diagnostic: compute the latitude
+	computedLat = pi/2 - acos(dot(align_rm/norm(align_rm), align_gm/norm(align_gm)));
+	disp(['Computed latitude of ' num2str(rad2deg(computedLat)) ' degrees. Deviation from given latitude: ' num2str(rad2deg(computedLat - latitude)) ' degrees.'])
 
 	% Step 1: leveling
 	[imu_orient, fail_reas] = imu.align_lvl(imu_orient, align_gm);
