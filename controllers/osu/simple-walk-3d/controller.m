@@ -23,19 +23,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 %   * If switching direction of walk, first slow down then switch to stand,
 %   come to stop, then take single step in new direction
 %
-% Plan:
-%   * Verify walk works over obstacles and can reliable control speed
-%   * Verify stand can stand in place and stagger around under 0.75
-%   * Confirm simple stagger stand is best way to do things, being closer
-%   to walk controller would be better
-%   * Get fast walk to slow down and transition to stand smoothly.
-%   * Get stand to walk to work smoothly
-%   * Then think about othercase (velocity change rate limit when there is
-%   a sign flip
-%
 % Copyright 2015 Mikhail S. Jones
 
-  %% INITIALIZE =========================================================
+  %% INITIALIZE ===========================================================
 
   % Set default emergency stop to false
   eStop = false;
@@ -57,10 +47,6 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   s_leg = 0.5; % Scale leg actuator gains for swing phase
   s_torso = 0.5; % Scale leg actuator gains for torso stabilization
   threshold = 50; % Spring torque threshold for scaling and switching (N*m)
-
-  % % Simulation time and velocity profile
-  % persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
-  % v_cmd = 1.2*(3 < T & T < 10) - 1.2*(13 < T & T < 20);
 
   % Persistent variable to keep track of current stance leg
   persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
@@ -94,17 +80,17 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
   % Initialize input vector to zeros
   u = zeros(6,1);
-  
+
   % Hip feed-forward torque for gravity compensation
   u(hip_u) = 35*[stanceLeg; -stanceLeg];
 
   % Initialize user output vector
   userOut = zeros(1,1);
 
-  %% MAIN CONTROLLER ====================================================
+  %% MAIN CONTROLLER ======================================================
 
   switch state
-  case 0 % STAND --------------------------------------------------------
+  case 0 % STAND ----------------------------------------------------------
     % Target leg actuator positions
     q0_leg = pi + [-1; 1; -1; 1]*acos(l0);
 
@@ -115,7 +101,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     u(leg_u) = (q0_leg - q(leg_m))*kp_leg + (dq0_leg - dq(leg_m))*kd_leg;
 
     % Target hip actuator positions
-    q0_hip = [-0.08; 0.08];
+    q0_hip = 0.08*[-1; 1];
 
     % Target hip actuator velocities
     dq0_hip = zeros(2,1);
@@ -123,13 +109,13 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Hip actuator torques from PD controller
     u(hip_u) = (q0_hip - q(hip_m))*kp_hip + (dq0_hip - dq(hip_m))*kd_hip;
 
-  case 1 % WALK ---------------------------------------------------------
+  case 1 % WALK -----------------------------------------------------------
     % Cartesian position of toes relative to hip in world frame
     x_st = sum(sin(q(13) + q(leg_l(1:2)))/2);
     y_st = sum(cos(q(13) + q(leg_l(1:2)))/2);
     x_sw = sum(sin(q(13) + q(leg_l(3:4)))/2);
     y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
-    
+
     % Scaling terms for torso stabilization and state switching is
     % based on absolute mean torque in springs scaled and clamped
     % between 0 and 1
@@ -145,7 +131,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
       dx = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
       dy = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
     end % if
-    
+
     % Stance leg push-off is proportional to desired speed and error
     l_ext = clamp(...
       1/30*abs(v_tgt) + ...
@@ -184,16 +170,16 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % ground projection point of the toe and find the corresponding leg
     % angle given a desired length)
     d_sw = cubic(0, 0.7, x_sw_e - x_st_e, l_step, 0, 0, s, 1);
-    r_sw = pi/2 + acos((x_st + d_sw)/l_sw) - q(13);
+    r_sw = pi/2 + real(acos((x_st + d_sw)/l_sw)) - q(13);
 
     % Target swing leg actuator positions
-    q_sw = r_sw + [-1; 1]*acos(l_sw);
+    q_sw = r_sw + [-1; 1]*real(acos(l_sw));
 
     % Target swing leg actuator velocities
     dq_sw = zeros(2,1);
 
     % Swing leg actuator torques from PD controller
-    u(leg_u(3:4)) = (q_sw - q(leg_m(3:4)))*kp_leg*s_leg + (dq_sw - dq(leg_m(3:4)))*kd_leg*s_leg;
+    u(leg_u(3:4)) = s_leg*((q_sw - q(leg_m(3:4)))*kp_leg + (dq_sw - dq(leg_m(3:4)))*kd_leg);
 
     % Stance leg push off policy (extend leg after mid stance linearly)
     l_st = l0 + l_ext*clamp(2*s - 1, 0, 1);
@@ -202,7 +188,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     l_st = l_st + clamp(y_sw - y_st, -l_ret, 0);
 
     % Target stance leg actuator positions
-    q_st = mean(q(leg_l(1:2))) + [-1; 1]*acos(l_st);
+    q_st = mean(q(leg_l(1:2))) + [-1; 1]*real(acos(l_st));
 
     % Target stance leg actuator velocities
     dq_st = [1; 1]*mean(dq(leg_l(1:2)));
@@ -220,13 +206,12 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Stop lateral adjusment after target TD
     if s < 1
       d = -0.08*stanceLeg - 0.3*dy;
-      d = clamp(d, -0.5, 0.5); % Prevent asin errors
     end % if
 
     % Inverse kinematics
     L = sqrt(l_l^2 + l_h^2);
-    q1 = asin(d/L);
-    q2 = asin(-l_h/L);
+    q1 = real(asin(d/L));
+    q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
     q_h = clamp(q_h, -0.1*stanceLeg, 0.2*stanceLeg); % -0.15, 0.3
     dq_h = 0;
@@ -245,7 +230,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
       stanceLeg = -stanceLeg;
 
       % Estimate extra required swing leg clearence in case of step
-      l_clr = ~isStand*clamp(abs(y_sw - y_st), 0, 0.15); % TODO: check if isStand is needed
+      l_clr = ~isStand*clamp(abs(y_sw - y_st), 0, 0.15);
 
       % Reset time since last switch
       t = 0;
@@ -277,7 +262,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % User outputs
     userOut = q_h;
 
-  otherwise % RELAX -----------------------------------------------------
+  otherwise % RELAX -------------------------------------------------------
     % Leg actuator torques computed to behave like virtual dampers
     u(leg_u) = (0 - dq(leg_m))*kd_leg;
     u(hip_u) = (0 - dq(hip_m))*kd_hip;
