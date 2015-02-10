@@ -9,25 +9,24 @@ classdef CmuCoords < handle
 			pitch = atan2(-R(3,1), sqrt(R(3,2)^2+R(3,3)^2));
 			roll  = atan2( R(3,2), R(3,3));
 
-			% TODO: Unwrap Yaw
+			% Unwrap the yaw value
+			this.curyaw = this.curyaw + mod(yaw - this.curyaw + pi, 2*pi) - pi;
 
 			% The angular velocity in IMU coordinates is a linear function of the individual joint
 			% velocities. This is the inverse function.
-			jvels = [ sin(yaw),           cos(yaw),            0
-			         -cos(yaw)/cos(roll), sin(yaw)/cos(roll),  0
-			         -cos(yaw)*tan(roll), sin(yaw)*tan(roll), -1 ] * ang_vel;
+			jvels = [ cos(y)*tan(p), tan(p)*sin(y), 1
+			          -sin(y),       cos(y),        0
+			          cos(y)/cos(p), sin(y)/cos(p), 0 ] * ang_vel;
 
 			% Grab the joint rates from the linear equation solution
-			droll = jvels(1);
+			dyaw   = jvels(1);
 			dpitch = jvels(2);
-			dyaw   = jvels(3);
-			roll  = roll + this.boomRollOffset;
+			droll  = jvels(3);
 		end
 	end
 
 	properties
-		yaw = 0
-		boomRollOffset  = 0.127      % Angle between the physical boom and the virtual boom. Units: radians
+		curyaw = 0 % Unwrapped yaw value
 	end
 end
 % vim: noexpandtab
