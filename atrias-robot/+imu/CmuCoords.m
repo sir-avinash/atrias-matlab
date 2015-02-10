@@ -5,18 +5,19 @@ classdef CmuCoords < handle
 			R = local_orient.toRotMat;
 
 			% Transform the rotation matrix to yaw-pitch-roll
-			yaw   = atan2( R(2,1), R(1,1));
-			pitch = atan2(-R(3,1), sqrt(R(3,2)^2+R(3,3)^2));
-			roll  = atan2( R(3,2), R(3,3));
+			newyaw = atan2( R(2,1), R(1,1));
+			pitch  = atan2(-R(3,1), sqrt(R(3,2)^2+R(3,3)^2));
+			roll   = atan2( R(3,2), R(3,3));
 
 			% Unwrap the yaw value
-			this.curyaw = this.curyaw + mod(yaw - this.curyaw + pi, 2*pi) - pi;
+			this.curyaw = this.curyaw + mod(newyaw - this.curyaw + pi, 2*pi) - pi;
+            yaw         = this.curyaw;
 
 			% The angular velocity in IMU coordinates is a linear function of the individual joint
 			% velocities. This is the inverse function.
-			jvels = [ cos(y)*tan(p), tan(p)*sin(y), 1
-			          -sin(y),       cos(y),        0
-			          cos(y)/cos(p), sin(y)/cos(p), 0 ] * ang_vel;
+			jvels = [ cos(yaw)*tan(pitch), tan(pitch)*sin(yaw), 1
+			         -sin(yaw),            cos(yaw),            0
+			          cos(yaw)/cos(pitch), sin(yaw)/cos(pitch), 0 ] * ang_vel;
 
 			% Grab the joint rates from the linear equation solution
 			dyaw   = jvels(1);

@@ -10,6 +10,10 @@
 %   leg = shin/thigh encoders
 %   trans = motor encoders
 
+% IMU Parameters (location dependent)
+imu_latitude = 44.5673031 * pi/180; % DRL latitude
+imu_heading = 2.7389; % Position for DRL Covell lab
+
 % Update rates
 update_freq = 1000; %Hz
 sample_time = 1/update_freq; % seconds
