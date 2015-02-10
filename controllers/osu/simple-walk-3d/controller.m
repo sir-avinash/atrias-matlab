@@ -80,6 +80,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   persistent t; if isempty(t); t = 0; else t = t + 0.001; end % if
 
   persistent d; if isempty(d); d = 0; end % if
+  persistent dx; if isempty(dx); dx = 0; end % if
+  persistent dy; if isempty(dy); dy = 0; end % if
 
   % Setup stance and swing indexes
   if stanceLeg == 1 % Left
@@ -92,6 +94,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
   % Initialize input vector to zeros
   u = zeros(6,1);
+  
+  % Hip feed-forward torque for gravity compensation
+  u(hip_u) = 35*[stanceLeg; -stanceLeg];
 
   % Initialize user output vector
   userOut = zeros(1,1);
@@ -124,14 +129,23 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     y_st = sum(cos(q(13) + q(leg_l(1:2)))/2);
     x_sw = sum(sin(q(13) + q(leg_l(3:4)))/2);
     y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
+    
+    % Scaling terms for torso stabilization and state switching is
+    % based on absolute mean torque in springs scaled and clamped
+    % between 0 and 1
+    s_st = clamp(ks_leg/threshold*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), 0, 1);
+    s_sw = clamp(ks_leg/threshold*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), 0, 1);
 
-    % Compute COM states
+    % Compute COM states (only update when we are 'confident' stance leg is
+    % on the ground
     l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
     l_h = 0.18*stanceLeg;
     l_t = 0.3434;
-    dx = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
-    dy = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
-
+    if s_st > 0.25
+      dx = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
+      dy = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
+    end % if
+    
     % Stance leg push-off is proportional to desired speed and error
     l_ext = clamp(...
       1/30*abs(v_tgt) + ...
@@ -196,12 +210,6 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Stance leg actuator torques from PD controller
     u(leg_u(1:2)) = (q_st - q(leg_m(1:2)))*kp_leg + (dq_st - dq(leg_m(1:2)))*kd_leg;
 
-    % Scaling terms for torso stabilization and state switching is
-    % based on absolute mean torque in springs scaled and clamped
-    % between 0 and 1
-    s_st = clamp(ks_leg/threshold*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), 0, 1);
-    s_sw = clamp(ks_leg/threshold*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), 0, 1);
-
     % Add additional torque commands to leg actuators to stabilize
     % scaled based on the "force" felt in the leg
     u(leg_u(1:2)) = u(leg_u(1:2)) + ...
@@ -220,7 +228,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     q1 = asin(d/L);
     q2 = asin(-l_h/L);
     q_h = q1 - q2 - q(11);
-    q_h = clamp(q_h, -0.15*stanceLeg, 0.3*stanceLeg);
+    q_h = clamp(q_h, -0.1*stanceLeg, 0.2*stanceLeg); % -0.15, 0.3
     dq_h = 0;
 
     % Swing leg PD controller
