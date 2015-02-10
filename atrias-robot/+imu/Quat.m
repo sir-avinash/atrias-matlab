@@ -49,6 +49,15 @@ classdef Quat
 		function vals = getVals(this)
 			vals = this.vals;
 		end
+
+		% Convert this quaternion into a rotation matrix
+		% This was derived (and verified) symbolically
+		function rotMat = toRotMat(this)
+			vals   = this.vals;
+			rotMat = [ vals(1)^2 + vals(2)^2 - vals(3)^2 - vals(4)^2, 2*vals(2)*vals(3) - 2*vals(1)*vals(4),         2*vals(2)*vals(4) + 2*vals(1)*vals(3)
+			           2*vals(2)*vals(3) + 2*vals(1)*vals(4),         vals(1)^2 - vals(2)^2 + vals(3)^2 - vals(4)^2, 2*vals(3)*vals(4) - 2*vals(1)*vals(2)
+			           2*vals(2)*vals(4) - 2*vals(1)*vals(3),         2*vals(3)*vals(4) + 2*vals(1)*vals(2),         vals(1)^2 - vals(2)^2 - vals(3)^2 + vals(4)^2 ];
+		end
 	end
 
 	properties
