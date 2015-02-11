@@ -19,6 +19,9 @@ update_freq = 1000; %Hz
 sample_time = 1/update_freq; % seconds
 correctedSampleTime = 0.0009977; % Seconds
 
+% This is the OSU robot
+isOsuRobot = true;
+
 % Medulla state parameters
 MEDULLA_STATE_IDLE  = 0;
 MEDULLA_STATE_RUN   = 2;
@@ -40,6 +43,7 @@ MEDULLA_ADC_MAX_VOLTS     = 2.70; % Volts
 % Renishaw Absolute 32-bit encoders
 LEG_A_CALIB_LOC = pi + 0.305432619099008; % Radians
 LEG_B_CALIB_LOC = pi - 0.305432619099008; % Radians
+max_encoder_velocity = 100; % Radians/sec
 
 % Ticks to radians constants
 BOOM_PITCH_ENCODER_RAD_PER_TICK = -2*pi / (2^17 * 2); % Ticks to rad constant = rad_per_rev / (ticks_per_rev * gear_ratio)
