@@ -39,14 +39,15 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
   v_cmd = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
   l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
-
+  thresh_l =  clamp(userIn(9), 0, 100); % Spring torque threshold for scaling and switching (N*m)
+  thresh_h =  clamp(userIn(10), 0, 100); % Spring torque threshold for scaling and switching (N*m)
+  
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
   l0 = 0.9; % Nominal leg length (m)
   q0_torso = 0; % Target torso pitch (rad)
   s_leg = 0.5; % Scale leg actuator gains for swing phase
   s_torso = 0.5; % Scale leg actuator gains for torso stabilization
-  threshold = 50; % Spring torque threshold for scaling and switching (N*m)
 
   % Persistent variable to keep track of current stance leg
   persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
@@ -85,7 +86,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   u(hip_u) = 35*[stanceLeg; -stanceLeg];
 
   % Initialize user output vector
-  userOut = zeros(1,1);
+  userOut = zeros(6,1);
 
   %% MAIN CONTROLLER ======================================================
 
@@ -101,7 +102,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     u(leg_u) = (q0_leg - q(leg_m))*kp_leg + (dq0_leg - dq(leg_m))*kd_leg;
 
     % Target hip actuator positions
-    q0_hip = 0.08*[-1; 1];
+    q0_hip = 0.08*stanceLeg*[-1; 1];
 
     % Target hip actuator velocities
     dq0_hip = zeros(2,1);
@@ -119,15 +120,15 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Scaling terms for torso stabilization and state switching is
     % based on absolute mean torque in springs scaled and clamped
     % between 0 and 1
-    s_st = clamp(ks_leg/threshold*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), 0, 1);
-    s_sw = clamp(ks_leg/threshold*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), 0, 1);
+    s_st = scaleFactor(ks_leg*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), thresh_l, thresh_h);
+    s_sw = scaleFactor(ks_leg*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), thresh_l, thresh_h);
 
     % Compute COM states (only update when we are 'confident' stance leg is
     % on the ground
     l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
     l_h = 0.18*stanceLeg;
     l_t = 0.3434;
-    if s_st > 0.25
+    if s_st >= 1
       dx = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
       dy = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
     end % if
@@ -260,7 +261,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     if abs(dx) < 0.01; isStand = true; end % if
 
     % User outputs
-    userOut = q_h;
+    userOut = [s_st; s_sw; dx; dy; d; q_h];
 
   otherwise % RELAX -------------------------------------------------------
     % Leg actuator torques computed to behave like virtual dampers
@@ -300,3 +301,10 @@ function [y, dy] = cubic(x1, x2, y1, y2, dy1, dy2, x, dx)
   y = a0*s^3 + a1*s^2 + a2*s + a3;
   dy = dx*(-3*a0*(x - x1)^2/(x1 - x2)^3 + 2*a1*(x - x1)/(x1 - x2)^2 - a2/(x1 - x2));
 end % cubic
+
+function s = scaleFactor(x, t_l, t_h)
+%SCALEFACTOR Create a scaling factor between t_l and t_h with an output
+%between 0 and 1
+
+  s = (clamp(x, t_l, t_h) - t_l)/(t_h - t_l);
+end
