@@ -129,11 +129,22 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     l_h = 0.18*stanceLeg;
     l_t = 0.1;%0.3434;
     if s_st >= 1
-      alpha = 0.05;
+      % Filter coefficient
+      alpha = 0.01;
+      
+      % Forward velocity (x)
       tmp = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
-      dx = dx + alpha*(tmp - dx);
+      if abs(tmp) < 1
+        % Use filter, but only update when velocity is reasonable
+        dx = dx + alpha*(tmp - dx);
+      end % if
+      
+      % Lateral velocity (y)
       tmp = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
-      dy = dy + alpha*(tmp - dy);
+      if abs(tmp) < 1
+        % Use filter, but only update when velocity is reasonable
+        dy = dy + alpha*(tmp - dy);
+      end % if
     end % if
 
     % Stance leg push-off is proportional to desired speed and error
@@ -217,7 +228,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     q1 = real(asin(d/L));
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
-    q_h = clamp(q_h, -0.05*stanceLeg, 0.1*stanceLeg); % -0.1, 0.2
+    q_h = clamp(q_h, -0.05*stanceLeg, 0.15*stanceLeg); % -0.1, 0.2
     dq_h = 0;
 
     % Swing leg PD controller
@@ -226,7 +237,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
-      [s_st; s_sw].*(q(11)*kp_hip + dq(11)*kd_hip);
+      [s_st; s_sw].*s_torso.*(q(11)*kp_hip + dq(11)*kd_hip);
 
     % Detect when swing leg force exceeds stance leg force
     if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)
