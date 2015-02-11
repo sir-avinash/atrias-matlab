@@ -39,9 +39,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
   v_cmd = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
   l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
-  thresh_l =  clamp(userIn(9), 0, 100); % Spring torque threshold for scaling and switching (N*m)
-  thresh_h =  clamp(userIn(10), 0, 100); % Spring torque threshold for scaling and switching (N*m)
-  
+  thresh_l =  clamp(userIn(9), 0, 100); % Lower spring torque threshold (N*m)
+  thresh_u =  clamp(userIn(10), 0, 100); % Upper spring torque threshold (N*m)
+
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
   l0 = 0.9; % Nominal leg length (m)
@@ -120,17 +120,20 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Scaling terms for torso stabilization and state switching is
     % based on absolute mean torque in springs scaled and clamped
     % between 0 and 1
-    s_st = scaleFactor(ks_leg*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), thresh_l, thresh_h);
-    s_sw = scaleFactor(ks_leg*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), thresh_l, thresh_h);
+    s_st = scaleFactor(ks_leg*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), thresh_l, thresh_u);
+    s_sw = scaleFactor(ks_leg*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), thresh_l, thresh_u);
 
     % Compute COM states (only update when we are 'confident' stance leg is
     % on the ground
     l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
     l_h = 0.18*stanceLeg;
-    l_t = 0.3434;
+    l_t = 0.1;%0.3434;
     if s_st >= 1
-      dx = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
-      dy = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
+      alpha = 0.05;
+      tmp = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
+      dx = dx + alpha*(tmp - dx);
+      tmp = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
+      dy = dy + alpha*(tmp - dy);
     end % if
 
     % Stance leg push-off is proportional to desired speed and error
@@ -214,7 +217,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     q1 = real(asin(d/L));
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
-    q_h = clamp(q_h, -0.1*stanceLeg, 0.2*stanceLeg); % -0.15, 0.3
+    q_h = clamp(q_h, -0.05*stanceLeg, 0.1*stanceLeg); % -0.1, 0.2
     dq_h = 0;
 
     % Swing leg PD controller
@@ -270,7 +273,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   end % switch
 
   % Limit absolute torque commands
-u = clamp(u, -u_lim, u_lim);
+  u = clamp(u, -u_lim, u_lim);
 end % controller
 
 %% LOCAL FUNCTIONS ========================================================
@@ -302,9 +305,8 @@ function [y, dy] = cubic(x1, x2, y1, y2, dy1, dy2, x, dx)
   dy = dx*(-3*a0*(x - x1)^2/(x1 - x2)^3 + 2*a1*(x - x1)/(x1 - x2)^2 - a2/(x1 - x2));
 end % cubic
 
-function s = scaleFactor(x, t_l, t_h)
-%SCALEFACTOR Create a scaling factor between t_l and t_h with an output
-%between 0 and 1
+function s = scaleFactor(f, tl, tu)
+%SCALEFACTOR Compute scalar (0 to 1) representing forces in leg.
 
-  s = (clamp(x, t_l, t_h) - t_l)/(t_h - t_l);
-end
+  s = (clamp(f, tl, tu) - tl)/(tu - tl);
+end % scaleFactor
