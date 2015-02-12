@@ -178,12 +178,12 @@ shin_initial_l = initial_l_leg_angle + acos(initial_l_leg_length);
 v_thigh_initial_r =  0;
 v_shin_initial_r =  0;
 
-initial_com_height = d_com + initial_r_leg_length + 0.02;
+initial_com_height = d_com + initial_r_leg_length + 0.01;
 initial_torso_yaw = 0*pi/180;
 initial_torso_pitch = 0*pi/180;
 initial_torso_roll = 0*pi/180;
 initial_pitch_joint_height = initial_com_height + boom_mount_to_com;
-initial_hip_roll = -0.08;
+initial_hip_roll = -0.15;
 initial_dx = 0;
 
 %% CONTACT MODEL ==========================================================

@@ -82,9 +82,6 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   % Initialize input vector to zeros
   u = zeros(6,1);
 
-  % Hip feed-forward torque for gravity compensation
-  u(hip_u) = 35*[stanceLeg; -stanceLeg];
-
   % Initialize user output vector
   userOut = zeros(6,1);
 
@@ -131,14 +128,14 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     if s_st >= 1
       % Filter coefficient
       alpha = 0.01;
-      
+
       % Forward velocity (x)
       tmp = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
       if abs(tmp) < 1
         % Use filter, but only update when velocity is reasonable
         dx = dx + alpha*(tmp - dx);
       end % if
-      
+
       % Lateral velocity (y)
       tmp = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
       if abs(tmp) < 1
@@ -162,7 +159,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         x_st, -0.5, 0.5);
 
       % Set leg swing trigger point
-      trig = 0.8;
+      trig = 0.6;
 
       % Define a time variant parameter
       s = t/0.5;
@@ -219,8 +216,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
       s_sw*s_torso*((q(13) - q0_torso)*kp_leg + dq(13)*kd_leg);
 
     % Stop lateral adjusment after target TD
-    if s < 1
-      d = -0.08*stanceLeg - 0.3*dy;
+    if s < trig
+      d = -0.1*stanceLeg - 0.4*dy;
     end % if
 
     % Inverse kinematics
@@ -228,8 +225,11 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     q1 = real(asin(d/L));
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
-    q_h = clamp(q_h, -0.05*stanceLeg, 0.15*stanceLeg); % -0.1, 0.2
+    % q_h = clamp(q_h, -0.1*stanceLeg, 0.2*stanceLeg); % -0.1, 0.2
     dq_h = 0;
+
+    % Hip feed-forward torque for gravity compensation
+    u(hip_u) = [1-s_st; 1-s_sw].*35.*[stanceLeg; -stanceLeg];
 
     % Swing leg PD controller
     u(hip_u(2)) = u(hip_u(2)) + ...
@@ -237,7 +237,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
-      [s_st; s_sw].*s_torso.*(q(11)*kp_hip + dq(11)*kd_hip);
+      [s_st; s_sw].*(q(11)*kp_hip + dq(11)*kd_hip); % s_torso.*
 
     % Detect when swing leg force exceeds stance leg force
     if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)
