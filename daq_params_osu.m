@@ -135,8 +135,8 @@ A_lpf_velocity = 1 + B1_lpf_velocity + B2_lpf_velocity;
 
 % Parameters related to incremental encoder decoding
 INC_ENC_RAD_PER_TICK = 2*pi/14000/LEG_MTR_GEAR_RATIO;
-INC_ENC_DIRS         = -[ LEG1_MOTOR_A_DIRECTION
-                          LEG1_MOTOR_B_DIRECTION
-                          LEG2_MOTOR_A_DIRECTION
-                          LEG2_MOTOR_B_DIRECTION ];
+LEG_INC_ENCODER_DIRECTION_RIGHT_BACK = -1.0;
+LEG_INC_ENCODER_DIRECTION_RIGHT_FRONT = -1.0;
+LEG_INC_ENCODER_DIRECTION_LEFT_BACK = 1.0;
+LEG_INC_ENCODER_DIRECTION_LEFT_FRONT = -1.0;
 MEDULLA_TIMER_FREQ = 32e6;
