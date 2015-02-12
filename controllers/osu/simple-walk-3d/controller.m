@@ -153,16 +153,20 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Tune parameters for desired speed
     if isStand
       % Step length is proportional to current velocity and error
-      l_step = clamp(...
-        0.2*dx - ...
-        clamp(0.4*(v_tgt - dx), -0.1, 0.1) - ...
-        x_st, -0.5, 0.5);
+%       l_step = clamp(...
+%         0.2*dx - ...
+%         clamp(0.4*(v_tgt - dx), -0.1, 0.1) - ...
+%         x_st, -0.5, 0.5);
 
+      l_step = clamp(...
+        0.3*dx - ...
+        x_st, -0.2, 0.2);
+      
       % Set leg swing trigger point
-      trig = 1;
+      trig = 0.8;
 
       % Define a time variant parameter
-      s = clamp(t/0.4, 0, 1);
+      s = clamp(t/0.35, 0, 1);
     else
       % Step length is constant and in direction of target velocity
       l_step = sign(v_tgt)*0.4;
@@ -217,7 +221,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Stop lateral adjusment after target TD
     if s < trig
-      d = -0.1*stanceLeg - 0.5*dy;
+%       d = -0.1*stanceLeg - 0.5*dy;
+      d = -0.1*stanceLeg - 0.3*dy;
     end % if
 
     % Inverse kinematics
@@ -225,11 +230,11 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     q1 = real(asin(d/L));
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
-    q_h = clamp(q_h, -0.1*stanceLeg, 0.25*stanceLeg);
+    q_h = clamp(q_h, -0.1*stanceLeg, 0.2*stanceLeg);
     dq_h = 0;
 
     % Hip feed-forward torque for gravity compensation
-    u(hip_u) = [1-s_st; 1-s_sw].*35.*[stanceLeg; -stanceLeg];
+    u(hip_u) = 35.*[stanceLeg; -stanceLeg]; %  [1-s_st; 1-s_sw].*
 
     % Swing leg PD controller
     u(hip_u(2)) = u(hip_u(2)) + ...
@@ -237,10 +242,10 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
-      [s_st; s_sw].*(q(11)*kp_hip + dq(11)*kd_hip); % .*s_torso
+      [s_st; s_sw].*s_torso.*(q(11)*kp_hip + dq(11)*kd_hip);
 
     % Detect when swing leg force exceeds stance leg force
-    if (s_sw > 0.2 && t > 0.2)
+    if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)
       % Switch stance legs
       stanceLeg = -stanceLeg;
 
