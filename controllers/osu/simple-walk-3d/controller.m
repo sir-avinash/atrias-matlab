@@ -159,10 +159,10 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
         x_st, -0.5, 0.5);
 
       % Set leg swing trigger point
-      trig = 0.6;
+      trig = 1;
 
       % Define a time variant parameter
-      s = t/0.5;
+      s = clamp(t/0.4, 0, 1);
     else
       % Step length is constant and in direction of target velocity
       l_step = sign(v_tgt)*0.4;
@@ -217,7 +217,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Stop lateral adjusment after target TD
     if s < trig
-      d = -0.1*stanceLeg - 0.4*dy;
+      d = -0.1*stanceLeg - 0.5*dy;
     end % if
 
     % Inverse kinematics
@@ -225,7 +225,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     q1 = real(asin(d/L));
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
-    % q_h = clamp(q_h, -0.1*stanceLeg, 0.2*stanceLeg); % -0.1, 0.2
+    q_h = clamp(q_h, -0.1*stanceLeg, 0.25*stanceLeg);
     dq_h = 0;
 
     % Hip feed-forward torque for gravity compensation
@@ -233,14 +233,14 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Swing leg PD controller
     u(hip_u(2)) = u(hip_u(2)) + ...
-      (q_h - q(hip_m(2)))*kp_hip + (dq_h - dq(hip_m(2)))*kd_hip;
+      s*((q_h - q(hip_m(2)))*kp_hip + (dq_h - dq(hip_m(2)))*kd_hip);
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
-      [s_st; s_sw].*(q(11)*kp_hip + dq(11)*kd_hip); % s_torso.*
+      [s_st; s_sw].*(q(11)*kp_hip + dq(11)*kd_hip); % .*s_torso
 
     % Detect when swing leg force exceeds stance leg force
-    if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)
+    if (s_sw > 0.2 && t > 0.2)
       % Switch stance legs
       stanceLeg = -stanceLeg;
 
