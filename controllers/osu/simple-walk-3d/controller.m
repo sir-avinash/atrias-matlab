@@ -39,8 +39,14 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
   v_cmd = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
   l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
-  thresh_l =  clamp(userIn(9), 0, 100); % Lower spring torque threshold (N*m)
-  thresh_u =  clamp(userIn(10), 0, 100); % Upper spring torque threshold (N*m)
+  thres_l = clamp(userIn(9), 0, 100); % Lower spring torque threshold (N*m)
+  thres_u = clamp(userIn(10), 0, 100); % Upper spring torque threshold (N*m)
+  alpha = clamp(userIn(11), 0, 1); % Filter coefficient
+  t_step = clamp(userIn(12), 0, 1); % Step duration (s)
+  dx_gain = clamp(userIn(13), 0, 1); % Transverse correction gain
+  dy_gain = clamp(userIn(14), 0, 1); % Transverse correction gain
+  yaw_gain = clamp(userIn(15), 0, 1); % Yaw correction gain
+  dyaw_gain = clamp(userIn(16), 0, 1); % Yaw velocity correction gain
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
@@ -65,7 +71,6 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
   % Persistent variable to keep track of time since last switch
   persistent t; if isempty(t); t = 0; else t = t + 0.001; end % if
-
   persistent d; if isempty(d); d = 0; end % if
   persistent dx; if isempty(dx); dx = 0; end % if
   persistent dy; if isempty(dy); dy = 0; end % if
@@ -89,6 +94,10 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
   switch state
   case 0 % STAND ----------------------------------------------------------
+    % Reset walking parameters
+    l_clr = 0; x_st_e = 0; x_sw_e = 0; v_tgt = 0;
+    t = 0; d = 0; dx = 0; dy = 0;
+
     % Target leg actuator positions
     q0_leg = pi + [-1; 1; -1; 1]*acos(l0);
 
@@ -117,18 +126,15 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Scaling terms for torso stabilization and state switching is
     % based on absolute mean torque in springs scaled and clamped
     % between 0 and 1
-    s_st = scaleFactor(ks_leg*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), thresh_l, thresh_u);
-    s_sw = scaleFactor(ks_leg*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), thresh_l, thresh_u);
+    s_st = scaleFactor(ks_leg*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), thres_l, thres_u);
+    s_sw = scaleFactor(ks_leg*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), thres_l, thres_u);
 
     % Compute COM states (only update when we are 'confident' stance leg is
     % on the ground
     l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
     l_h = 0.18*stanceLeg;
-    l_t = 0.1;%0.3434;
+    l_t = 0.1;
     if s_st >= 1
-      % Filter coefficient
-      alpha = 0.01;
-
       % Forward velocity (x)
       tmp = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
       if abs(tmp) < 1
@@ -152,21 +158,18 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Tune parameters for desired speed
     if isStand
-      % Step length is proportional to current velocity and error
-%       l_step = clamp(...
-%         0.2*dx - ...
-%         clamp(0.4*(v_tgt - dx), -0.1, 0.1) - ...
-%         x_st, -0.5, 0.5);
+      % Step length is proportional to current velocity
+      l_step = clamp(dx_gain*dx - x_st, -0.2, 0.2);
 
-      l_step = clamp(...
-        0.3*dx - ...
-        x_st, -0.2, 0.2);
-      
+      % Layer on yaw correction
+      l_step = l_step + ...
+        clamp(-stanceLeg*(yaw_gain*q(12) + dyaw_gain*dq(12)), -0.1, 0.1);
+
       % Set leg swing trigger point
       trig = 0.8;
 
       % Define a time variant parameter
-      s = clamp(t/0.35, 0, 1);
+      s = clamp(t/t_step, 0, 1);
     else
       % Step length is constant and in direction of target velocity
       l_step = sign(v_tgt)*0.4;
@@ -221,8 +224,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Stop lateral adjusment after target TD
     if s < trig
-%       d = -0.1*stanceLeg - 0.5*dy;
-      d = -0.1*stanceLeg - 0.3*dy;
+      d = -0.1*stanceLeg - dy_gain*dy;
     end % if
 
     % Inverse kinematics
@@ -230,11 +232,11 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     q1 = real(asin(d/L));
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
-    q_h = clamp(q_h, -0.1*stanceLeg, 0.2*stanceLeg);
+    q_h = clamp(q_h, -0.1*stanceLeg, 0.3*stanceLeg);
     dq_h = 0;
 
     % Hip feed-forward torque for gravity compensation
-    u(hip_u) = 35.*[stanceLeg; -stanceLeg]; %  [1-s_st; 1-s_sw].*
+    u(hip_u) = 35.*[stanceLeg; -stanceLeg];
 
     % Swing leg PD controller
     u(hip_u(2)) = u(hip_u(2)) + ...
