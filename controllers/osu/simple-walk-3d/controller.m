@@ -45,13 +45,12 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   t_step = clamp(userIn(12), 0, 1); % Step duration (s)
   dx_gain = clamp(userIn(13), 0, 1); % Transverse correction gain
   dy_gain = clamp(userIn(14), 0, 1); % Transverse correction gain
-  yaw_gain = clamp(userIn(15), 0, 1); % Yaw correction gain
-  dyaw_gain = clamp(userIn(16), 0, 1); % Yaw velocity correction gain
+  pitch_t = clamp(userIn(15), -0.2, 0.2); % Target torso pitch (rad)
+  roll_t = clamp(userIn(16), -0.2, 0.2); % Target torso roll (rad)
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
   l0 = 0.9; % Nominal leg length (m)
-  q0_torso = 0; % Target torso pitch (rad)
   s_leg = 0.5; % Scale leg actuator gains for swing phase
   s_torso = 0.5; % Scale leg actuator gains for torso stabilization
 
@@ -89,6 +88,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
   % Initialize user output vector
   userOut = zeros(6,1);
+
+  % persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
+  % v_cmd = 0.5*(T > 5);
 
   %% MAIN CONTROLLER ======================================================
 
@@ -159,14 +161,10 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Tune parameters for desired speed
     if isStand
       % Step length is proportional to current velocity
-      l_step = clamp(dx_gain*dx - x_st, -0.2, 0.2);
-
-      % Layer on yaw correction
-      l_step = l_step + ...
-        clamp(-stanceLeg*(yaw_gain*q(12) + dyaw_gain*dq(12)), -0.1, 0.1);
+      l_step = clamp(dx_gain*dx - 0.1*v_tgt - x_st, -0.2, 0.2);
 
       % Set leg swing trigger point
-      trig = 0.8;
+      trig = 0.75; % 0.8;
 
       % Define a time variant parameter
       s = clamp(t/t_step, 0, 1);
@@ -218,9 +216,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     % Add additional torque commands to leg actuators to stabilize
     % scaled based on the "force" felt in the leg
     u(leg_u(1:2)) = u(leg_u(1:2)) + ...
-      s_st*s_torso*((q(13) - q0_torso)*kp_leg + dq(13)*kd_leg);
+      s_st*s_torso*((q(13) - pitch_t)*kp_leg + dq(13)*kd_leg);
     u(leg_u(3:4)) = u(leg_u(3:4)) + ...
-      s_sw*s_torso*((q(13) - q0_torso)*kp_leg + dq(13)*kd_leg);
+      s_sw*s_torso*((q(13) - pitch_t)*kp_leg + dq(13)*kd_leg);
 
     % Stop lateral adjusment after target TD
     if s < trig
@@ -236,7 +234,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     dq_h = 0;
 
     % Hip feed-forward torque for gravity compensation
-    u(hip_u) = 35.*[stanceLeg; -stanceLeg];
+    u(hip_u) = 37.*[stanceLeg; -stanceLeg];
 
     % Swing leg PD controller
     u(hip_u(2)) = u(hip_u(2)) + ...
@@ -244,7 +242,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
-      [s_st; s_sw].*s_torso.*(q(11)*kp_hip + dq(11)*kd_hip);
+      [s_st; s_sw].*s_torso.*((q(11) - roll_t)*kp_hip + dq(11)*kd_hip);
 
     % Detect when swing leg force exceeds stance leg force
     if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)

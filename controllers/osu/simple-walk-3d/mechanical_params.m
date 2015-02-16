@@ -168,17 +168,17 @@ i_robot = i_torso_moments(3) + m_torso*(d_hip_com_to_torso_com - d_com)^2 + num_
 
 %% INITIAL CONDITIONS =====================================================
 initial_r_leg_length = 0.9;
-initial_r_leg_angle =  pi;% + 0.2;
+initial_r_leg_angle =  pi;
 thigh_initial_r = initial_r_leg_angle - acos(initial_r_leg_length);
 shin_initial_r = initial_r_leg_angle + acos(initial_r_leg_length);
 initial_l_leg_length = 0.9;
-initial_l_leg_angle = pi;% - 0.2;
+initial_l_leg_angle = pi;
 thigh_initial_l = initial_l_leg_angle - acos(initial_l_leg_length);
 shin_initial_l = initial_l_leg_angle + acos(initial_l_leg_length);
 v_thigh_initial_r =  0;
 v_shin_initial_r =  0;
 
-initial_com_height = d_com + initial_r_leg_length + 0.01;
+initial_com_height = d_com + initial_r_leg_length + 0.03;
 initial_torso_yaw = 0*pi/180;
 initial_torso_pitch = 0*pi/180;
 initial_torso_roll = 0*pi/180;
