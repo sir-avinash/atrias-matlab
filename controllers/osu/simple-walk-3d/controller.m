@@ -1,4 +1,4 @@
-function [eStop, u, userOut] = controller(q, dq, userIn)
+function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 %CONTROLLER Simple ATRIAS walking controller.
 %
 % Description:
@@ -37,16 +37,19 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   kd_leg = clamp(userIn(4), 0, 500); % Leg motor differential gain (N*m*s/rad)
   kp_hip = clamp(userIn(5), 0, 2000); % Hip motor proportional gain (N*m/rad)
   kd_hip = clamp(userIn(6), 0, 200); % Hip motor differential gain (N*m*s/rad)
-  v_cmd = clamp(userIn(7), -1.5, 1.5); % Velocity (m/s)
-  l_ret = clamp(userIn(8), 0, 0.25); % Leg retraction (m)
-  thres_l = clamp(userIn(9), 0, 100); % Lower spring torque threshold (N*m)
-  thres_u = clamp(userIn(10), 0, 100); % Upper spring torque threshold (N*m)
-  alpha = clamp(userIn(11), 0, 1); % Filter coefficient
-  t_step = clamp(userIn(12), 0, 1); % Step duration (s)
-  dx_gain = clamp(userIn(13), 0, 1); % Transverse correction gain
-  dy_gain = clamp(userIn(14), 0, 1); % Transverse correction gain
-  pitch_t = clamp(userIn(15), -0.2, 0.2); % Target torso pitch (rad)
-  roll_t = clamp(userIn(16), -0.2, 0.2); % Target torso roll (rad)
+  l_ret = clamp(userIn(7), 0, 0.25); % Leg retraction (m)
+  thres_l = clamp(userIn(8), 0, 100); % Lower spring torque threshold (N*m)
+  thres_u = clamp(userIn(9), 0, 100); % Upper spring torque threshold (N*m)
+  alpha = clamp(userIn(10), 0, 1); % Filter coefficient
+  t_step = clamp(userIn(11), 0, 1); % Step duration (s)
+  dx_gain = clamp(userIn(12), 0, 1); % Transverse correction gain
+  dy_gain = clamp(userIn(13), 0, 1); % Transverse correction gain
+  pitch_t = clamp(userIn(14), -0.2, 0.2); % Target torso pitch (rad)
+  roll_t = clamp(userIn(15), -0.2, 0.2); % Target torso roll (rad)
+
+  % Controller input (3D Mouse or Joystick)
+  vx_cmd = clamp(-2*controlIn(3), -0.2, 0.2); % X Velocity (m/s)
+  vy_cmd = clamp(2*controlIn(1), -0.2, 0.2); % Y Velocity (m/s)
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
@@ -65,7 +68,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   persistent x_sw_e; if isempty(x_sw_e); x_sw_e = 0; end % if
 
   % Persistent variable to keep track controller type
-  persistent v_tgt; if isempty(v_tgt); v_tgt = v_cmd; end % if
+  persistent vx_tgt; if isempty(vx_tgt); vx_tgt = vx_cmd; end % if
+  persistent vy_tgt; if isempty(vy_tgt); vy_tgt = vy_cmd; end % if
   persistent isStand; if isempty(isStand); isStand = true; end % if
 
   % Persistent variable to keep track of time since last switch
@@ -87,17 +91,24 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
   u = zeros(6,1);
 
   % Initialize user output vector
-  userOut = zeros(6,1);
-
-  % persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
-  % v_cmd = 0.5*(T > 5);
+  userOut = zeros(4,1);
+  
+  % For testing standing controller (overrides walking transition code)
+  vx_tgt = vx_cmd;
+  vy_tgt = vy_cmd;
+  isStand = true;
+  
+  % Simulator test --------------------------------------------------------
+  persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
+  vx_tgt = 0.2*(T > 5 && T < 10) - 0.2*(T > 15 && T < 20);
+  vy_tgt = 0.2*(T > 10 && T < 15) - 0.2*(T > 20 && T < 25);
 
   %% MAIN CONTROLLER ======================================================
 
   switch state
   case 0 % STAND ----------------------------------------------------------
     % Reset walking parameters
-    l_clr = 0; x_st_e = 0; x_sw_e = 0; v_tgt = 0;
+    l_clr = 0; x_st_e = 0; x_sw_e = 0; vx_tgt = 0;
     t = 0; d = 0; dx = 0; dy = 0;
 
     % Target leg actuator positions
@@ -154,23 +165,23 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Stance leg push-off is proportional to desired speed and error
     l_ext = clamp(...
-      1/30*abs(v_tgt) + ...
-      1/20*sign(v_tgt)*(v_tgt - dx), ...
-      0, 0.05)*(sign(v_tgt) == sign(dx));
+      1/30*abs(vx_tgt) + ...
+      1/20*sign(vx_tgt)*(vx_tgt - dx), ...
+      0, 0.05)*(sign(vx_tgt) == sign(dx));
 
     % Tune parameters for desired speed
     if isStand
       % Step length is proportional to current velocity
-      l_step = clamp(dx_gain*dx - 0.1*v_tgt - x_st, -0.2, 0.2);
+      l_step = clamp(dx_gain*dx - clamp(0.1*vx_tgt, -0.05, 0.05) - x_st, -0.2, 0.2);
 
       % Set leg swing trigger point
-      trig = 0.75; % 0.8;
+      trig = 0.75;
 
       % Define a time variant parameter
       s = clamp(t/t_step, 0, 1);
     else
       % Step length is constant and in direction of target velocity
-      l_step = sign(v_tgt)*0.4;
+      l_step = sign(vx_tgt)*0.4;
 
       % Set leg swing trigger point
       trig = 0.6;
@@ -222,7 +233,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
 
     % Stop lateral adjusment after target TD
     if s < trig
-      d = -0.1*stanceLeg - dy_gain*dy;
+      d = -0.1*stanceLeg - dy_gain*dy + clamp(0.2*vy_tgt, -0.05, 0.05);
     end % if
 
     % Inverse kinematics
@@ -260,18 +271,18 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
       x_sw_e = x_st;
 
       % Check standing speed or direction flip of commanded velocity
-      if abs(v_cmd) < 0.75 || sign(v_cmd) ~= sign(dx)
+      if abs(vx_cmd) < 0.75 || sign(vx_cmd) ~= sign(dx)
         % Walk slower
         if abs(dx) > 1 && ~isStand
-          v_tgt = sign(dx)*0.75;
+          vx_tgt = sign(dx)*0.75;
         % Stand
         else
-          v_tgt = sign(v_cmd)*0.25;
+          vx_tgt = sign(vx_cmd)*0.25;
           isStand = true;
         end % if
       else
         % Walk normal
-        v_tgt = v_cmd;
+        vx_tgt = vx_cmd;
         isStand = false;
       end % if
     end % if
@@ -280,7 +291,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn)
     if abs(dx) < 0.01; isStand = true; end % if
 
     % User outputs
-    userOut = [s_st; s_sw; dx; dy; d; q_h];
+    userOut = [vx_tgt; vy_tgt; dx; dy];
 
   otherwise % RELAX -------------------------------------------------------
     % Leg actuator torques computed to behave like virtual dampers
