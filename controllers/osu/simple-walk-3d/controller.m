@@ -48,15 +48,15 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   roll_t = clamp(userIn(15), -0.2, 0.2); % Target torso roll (rad)
 
   % Controller input (3D Mouse or Joystick)
-  vx_cmd = clamp(-4*controlIn(3), -0.4, 0.4); % X Velocity (m/s)
-  vy_cmd = clamp(2*controlIn(1), -0.2, 0.2); % Y Velocity (m/s)
+  vx_cmd = clamp(-0.4*controlIn(3), -0.4, 0.4); % X Velocity (m/s)
+  vy_cmd = clamp(0.2*controlIn(1), -0.2, 0.2); % Y Velocity (m/s)
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
   l0 = 0.9; % Nominal leg length (m)
   s_leg = 0.5; % Scale leg actuator gains for swing phase
   s_torso = 0.5; % Scale leg actuator gains for torso stabilization
-
+  
   % Persistent variable to keep track of current stance leg
   persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
 
