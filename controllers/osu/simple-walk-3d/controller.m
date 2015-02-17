@@ -48,8 +48,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   roll_t = clamp(userIn(15), -0.2, 0.2); % Target torso roll (rad)
 
   % Controller input (3D Mouse or Joystick)
-  vx_cmd = clamp(-0.4*controlIn(3), -0.4, 0.4); % X Velocity (m/s)
-  vy_cmd = clamp(0.2*controlIn(1), -0.2, 0.2); % Y Velocity (m/s)
+  vx_cmd = clamp(-0.2*controlIn(3), -0.2, 0.2); % X Velocity (m/s)
+  vy_cmd = clamp(0.1*controlIn(1), -0.1, 0.1); % Y Velocity (m/s)
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
@@ -175,7 +175,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
       l_step = clamp(dx_gain*dx - clamp(0.1*vx_tgt, -0.05, 0.05) - x_st, -0.2, 0.2);
 
       % Set leg swing trigger point
-      trig = 0.75;
+      trig = 0.8;
 
       % Define a time variant parameter
       s = clamp(t/t_step, 0, 1);
