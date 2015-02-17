@@ -48,7 +48,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   roll_t = clamp(userIn(15), -0.2, 0.2); % Target torso roll (rad)
 
   % Controller input (3D Mouse or Joystick)
-  vx_cmd = clamp(-2*controlIn(3), -0.2, 0.2); % X Velocity (m/s)
+  vx_cmd = clamp(-4*controlIn(3), -0.4, 0.4); % X Velocity (m/s)
   vy_cmd = clamp(2*controlIn(1), -0.2, 0.2); % Y Velocity (m/s)
 
   % Gait parameters
@@ -92,16 +92,16 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
   % Initialize user output vector
   userOut = zeros(4,1);
-  
+
   % For testing standing controller (overrides walking transition code)
   vx_tgt = vx_cmd;
   vy_tgt = vy_cmd;
   isStand = true;
-  
+
   % Simulator test --------------------------------------------------------
-  persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
-  vx_tgt = 0.2*(T > 5 && T < 10) - 0.2*(T > 15 && T < 20);
-  vy_tgt = 0.2*(T > 10 && T < 15) - 0.2*(T > 20 && T < 25);
+%   persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
+%   vx_tgt = 0.4*(T > 5 && T < 10) - 0.4*(T > 15 && T < 20);
+%   vy_tgt = 0.2*(T > 10 && T < 15) - 0.2*(T > 20 && T < 25);
 
   %% MAIN CONTROLLER ======================================================
 
