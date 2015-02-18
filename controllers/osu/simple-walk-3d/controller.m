@@ -42,21 +42,23 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   thres_u = clamp(userIn(9), 0, 100); % Upper spring torque threshold (N*m)
   alpha = clamp(userIn(10), 0, 1); % Filter coefficient
   t_step = clamp(userIn(11), 0, 1); % Step duration (s)
-  dx_gain = clamp(userIn(12), 0, 1); % Transverse correction gain
-  dy_gain = clamp(userIn(13), 0, 1); % Transverse correction gain
+  dx_gain = clamp(userIn(12), 0, 1); % Transverse velocity gain
+  dy_gain = clamp(userIn(13), 0, 1); % Transverse velocity gain
   pitch_t = clamp(userIn(14), -0.2, 0.2); % Target torso pitch (rad)
   roll_t = clamp(userIn(15), -0.2, 0.2); % Target torso roll (rad)
+  y_gain = clamp(userIn(16), -0.2, 0.2); % Transverse position gain
+  y0 = clamp(userIn(17), -0.2, 0.2); % Hip offset
 
   % Controller input (3D Mouse or Joystick)
-  vx_cmd = clamp(-0.2*controlIn(3), -0.2, 0.2); % X Velocity (m/s)
-  vy_cmd = clamp(0.1*controlIn(1), -0.1, 0.1); % Y Velocity (m/s)
+  vx_cmd = clamp(controlIn(1), -0.2, 0.2); % X Velocity (m/s)
+  vy_cmd = clamp(controlIn(2), -0.1, 0.1); % Y Velocity (m/s)
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
   l0 = 0.9; % Nominal leg length (m)
   s_leg = 0.5; % Scale leg actuator gains for swing phase
   s_torso = 0.5; % Scale leg actuator gains for torso stabilization
-  
+
   % Persistent variable to keep track of current stance leg
   persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
 
@@ -69,12 +71,18 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
   % Persistent variable to keep track controller type
   persistent vx_tgt; if isempty(vx_tgt); vx_tgt = vx_cmd; end % if
-  persistent vy_tgt; if isempty(vy_tgt); vy_tgt = vy_cmd; end % if
   persistent isStand; if isempty(isStand); isStand = true; end % if
 
   % Persistent variable to keep track of time since last switch
   persistent t; if isempty(t); t = 0; else t = t + 0.001; end % if
+
   persistent d; if isempty(d); d = 0; end % if
+
+  persistent x; if isempty(x); x = 0; end % if
+  persistent y; if isempty(y); y = 0; end % if
+  persistent xt; if isempty(xt); xt = 0; end % if
+  persistent yt; if isempty(yt); yt = 0; end % if
+
   persistent dx; if isempty(dx); dx = 0; end % if
   persistent dy; if isempty(dy); dy = 0; end % if
 
@@ -95,13 +103,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
   % For testing standing controller (overrides walking transition code)
   vx_tgt = vx_cmd;
-  vy_tgt = vy_cmd;
   isStand = true;
-
-  % Simulator test --------------------------------------------------------
-%   persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
-%   vx_tgt = 0.4*(T > 5 && T < 10) - 0.4*(T > 15 && T < 20);
-%   vy_tgt = 0.2*(T > 10 && T < 15) - 0.2*(T > 20 && T < 25);
 
   %% MAIN CONTROLLER ======================================================
 
@@ -109,7 +111,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   case 0 % STAND ----------------------------------------------------------
     % Reset walking parameters
     l_clr = 0; x_st_e = 0; x_sw_e = 0; vx_tgt = 0;
-    t = 0; d = 0; dx = 0; dy = 0;
+    t = 0; d = 0; x = 0; y = 0; dx = 0; dy = 0;
 
     % Target leg actuator positions
     q0_leg = pi + [-1; 1; -1; 1]*acos(l0);
@@ -121,7 +123,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     u(leg_u) = (q0_leg - q(leg_m))*kp_leg + (dq0_leg - dq(leg_m))*kd_leg;
 
     % Target hip actuator positions
-    q0_hip = 0.08*stanceLeg*[-1; 1];
+    q0_hip = y0*stanceLeg*[-1; 1];
 
     % Target hip actuator velocities
     dq0_hip = zeros(2,1);
@@ -142,22 +144,35 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     s_st = scaleFactor(ks_leg*mean(abs(q(leg_m(1:2)) - q(leg_l(1:2)))), thres_l, thres_u);
     s_sw = scaleFactor(ks_leg*mean(abs(q(leg_m(3:4)) - q(leg_l(3:4)))), thres_l, thres_u);
 
-    % Compute COM states (only update when we are 'confident' stance leg is
-    % on the ground
+    % Forward kinematic lengths
     l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
     l_h = 0.18*stanceLeg;
     l_t = 0.1;
+
+    % Update CoM states when we are 'confident' stance leg is on the ground
     if s_st >= 1
       % Forward velocity (x)
       tmp = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
-      if abs(tmp) < 1
+
+      % Forward position (x)
+      xt = xt + tmp*0.001;
+      x = x + tmp*0.001;
+
+      % Filter velocity and ignore bad values
+      if abs(tmp) < 2
         % Use filter, but only update when velocity is reasonable
         dx = dx + alpha*(tmp - dx);
       end % if
 
       % Lateral velocity (y)
       tmp = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
-      if abs(tmp) < 1
+
+      % Lateral position (y)
+      yt = yt + tmp*0.001;
+      y = y + tmp*0.001;
+
+      % Filter velocity and ignore bad values
+      if abs(tmp) < 2
         % Use filter, but only update when velocity is reasonable
         dy = dy + alpha*(tmp - dy);
       end % if
@@ -233,7 +248,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
     % Stop lateral adjusment after target TD
     if s < trig
-      d = -0.1*stanceLeg - dy_gain*dy + clamp(0.2*vy_tgt, -0.05, 0.05);
+      d = - y0*stanceLeg - dy_gain*dy - clamp(y_gain*yt, -0.02, 0.02);
     end % if
 
     % Inverse kinematics
@@ -265,6 +280,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
       % Reset time since last switch
       t = 0;
+      xt = 0;
+      yt = 0;
 
       % Exit conditions
       x_st_e = x_sw;
@@ -291,7 +308,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     if abs(dx) < 0.01; isStand = true; end % if
 
     % User outputs
-    userOut = [vx_tgt; vy_tgt; dx; dy];
+    userOut = [x; y; dx; dy];
 
   otherwise % RELAX -------------------------------------------------------
     % Leg actuator torques computed to behave like virtual dampers
