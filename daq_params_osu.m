@@ -57,8 +57,8 @@ LEFT_HIP_INC_ENCODER_RAD_PER_TICK =  HIP_INC_ENCODER_RAD_PER_TICK;
 LEG_INC_ENCODER_RAD_PER_TICK = 2*pi / (4*3500*50); % rad_per_rev / (decoding style * lines per rev * gear ratio)
 
 % Motor parameters
-LEFT_MOTOR_HIP_DIRECTION = -1.0; %The direction for the left hip motor.
-RIGHT_MOTOR_HIP_DIRECTION = 1.0; %The direction for the right hip motor.
+LEFT_MOTOR_HIP_DIRECTION = 1.0; %The direction for the left hip motor.
+RIGHT_MOTOR_HIP_DIRECTION = -1.0; %The direction for the right hip motor.
 MTR_MAX_COUNT = 1990; % The maximum commanded amplifier value. This is the maximum value sent to the Medullas for the amplifier command.
 LEG_MOTOR_CONSTANT = 0.119;
 HIP_MOTOR_CONSTANT = 0.184;
