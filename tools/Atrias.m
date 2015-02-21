@@ -74,8 +74,8 @@ classdef Atrias < handle
       % Set object properties
       obj.q = q;
       obj.dq = dq;
-      obj.left  = AtriasLeg(obj, q(:,[5:8 10]), dq(:,[5:8 10]), u(:,1:3), toe(:,2));
-      obj.right = AtriasLeg(obj, q(:,[1:4 9]), dq(:,[1:4 9]), u(:,4:6), toe(:,1));
+      obj.left  = AtriasLeg(obj, q(:,[5:8 10]), dq(:,[5:8 10]), u(:,4:6), toe(:,2));
+      obj.right = AtriasLeg(obj, q(:,[1:4 9]), dq(:,[1:4 9]), u(:,1:3), toe(:,1));
       obj.boomRollAngle = q(:,11);
       obj.boomRollVelocity = dq(:,11);
       obj.boomYawAngle = q(:,12);
