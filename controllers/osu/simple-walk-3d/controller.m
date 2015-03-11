@@ -56,19 +56,20 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   l0_leg = clamp(userIn(17), 0.85, 0.95); % Nominal leg length (m)
   s_torso = clamp(userIn(18), 0, 1); % Scale leg actuator gains for torso stabilization
   s_leg = clamp(userIn(19), 0, 1); % Scale leg actuator gains for swing phase
-  d_offset = clamp(userIn(20), -0.1, 0.1); % Torso CoM offset
+  d_offset = clamp(userIn(20), -0.05, 0.05); % Torso CoM offset (m)
+  yaw_offset = clamp(userIn(21), -0.05, 0.05); % Torso yaw offset (rad)
 
   % Controller input
-  dx_cmd = -0.5*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
-  dy_cmd = -0*0.3*clamp(controlIn(1), -1, 1); % Y Velocity (m/s)
-  q0_pitch = -0*clamp(controlIn(4), -1, 1); % Torso pitch (rad)
-  q0_roll = 0*clamp(controlIn(3), -1, 1); % Torso roll (rad)
+  dx_cmd = -0.6*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
+  dy_cmd = -0.2*clamp(controlIn(1), -1, 1); % Y Velocity (m/s)
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
 
   % Controller parameters
   dt = 0.001; % Sample time (sec)
+  q0_pitch = 0; % Torso pitch (rad)
+  q0_roll = 0; % Torso roll (rad)
 
   % Persistent variable to keep track of current stance leg
   persistent stanceLeg; if isempty(stanceLeg); stanceLeg = 1; end % if
@@ -119,12 +120,16 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
 
   % % Figure eight
-  % dx_cmd = 0.6*sin(T*2*pi/15);
-  % dy_cmd = 0.4*cos(T*2*pi/7.5);
+  % dx_cmd = 0.5*sin(T*2*pi/15);
+  % dy_cmd = 0.5*cos(T*2*pi/7.5);
 
   % % Forward walk
-  % dx_cmd = clamp((T-5)*0.2, 0, 1);
+  % dx_cmd = clamp(0.1*round(T/5), 0, 1);
   % dy_cmd = 0;
+
+  % % Side step
+  % dx_cmd = 0;
+  % dy_cmd = clamp(0.1*round(T/5), 0, 0.5);
 
   % Force standing controller
   isStand = true;
@@ -200,7 +205,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     y_est = y_est + dy_est*dt;
 
     % Stance leg push-off is proportional to desired speed and error
-    l_ext = clamp(...
+    l_ext = 0*clamp(...
       1/30*abs(dx_tgt) + ...
       1/20*sign(dx_tgt)*(dx_tgt - dx_est), ...
       0, 0.02)*(sign(dx_tgt) == sign(dx_est));
@@ -211,7 +216,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
       l_step = clamp(...
         dx_est*dx_gain + ...
         (dx_est - dx_tgt)*dx_err_gain + ...
-        l_t*sin(q(13)), ...
+        l_t*sin(q(13)) + ...
+        stanceLeg*yaw_offset, ...
         -0.3, 0.3);
 
       % Set leg swing trigger point
@@ -336,7 +342,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     if abs(dx_est) < 0.05; isStand = true; end % if
 
     % User outputs
-    userOut = [x_est; y_est; dx_est; dy_est; dx_cmd; dy_cmd];
+    userOut = [q(12); 0; dx_est; dy_est; dx_cmd; dy_cmd];
 
   otherwise % RELAX -------------------------------------------------------
     % Leg actuator torques computed to behave like virtual dampers
