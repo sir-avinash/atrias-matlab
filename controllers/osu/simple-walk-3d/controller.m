@@ -52,12 +52,13 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   dy_gain = clamp(userIn(13), 0, 1); % Transverse velocity gain
   dx_err_gain = clamp(userIn(14), 0, 1); % Transverse velocity error gain
   dy_err_gain = clamp(userIn(15), 0, 1); % Transverse velocity error gain
-  d0_hip = clamp(userIn(16), -0.2, 0.2); % Hip offset
+  d0_hip = clamp(userIn(16), -0.2, 0.2); % Hip offset (m)
   l0_leg = clamp(userIn(17), 0.85, 0.95); % Nominal leg length (m)
   s_torso = clamp(userIn(18), 0, 1); % Scale leg actuator gains for torso stabilization
   s_leg = clamp(userIn(19), 0, 1); % Scale leg actuator gains for swing phase
   d_offset = clamp(userIn(20), -0.05, 0.05); % Torso CoM offset (m)
   yaw_offset = clamp(userIn(21), -0.05, 0.05); % Torso yaw offset (rad)
+  d0_offset_gain = clamp(userIn(22), -0.1, 0.1); % Toe offset gain
 
   % Controller input
   dx_cmd = -0.6*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
@@ -123,9 +124,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   % dx_cmd = 0.5*sin(T*2*pi/15);
   % dy_cmd = 0.5*cos(T*2*pi/7.5);
 
-  % % Forward walk
-  % dx_cmd = clamp(0.1*round(T/5), 0, 1);
-  % dy_cmd = 0;
+  % Forward walk
+  dx_cmd = clamp(0.2*round(T/5), 0, 1.5);
+  dy_cmd = 0;
 
   % % Side step
   % dx_cmd = 0;
@@ -209,6 +210,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
       1/30*abs(dx_tgt) + ...
       1/20*sign(dx_tgt)*(dx_tgt - dx_est), ...
       0, 0.02)*(sign(dx_tgt) == sign(dx_est));
+
+    % Bring toes in as speed increases
+    d0_hip = d0_hip - d0_offset_gain*dx_tgt;
 
     % Tune parameters for desired speed
     if isStand
