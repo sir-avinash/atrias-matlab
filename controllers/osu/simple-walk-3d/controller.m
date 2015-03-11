@@ -56,10 +56,11 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   l0_leg = clamp(userIn(17), 0.85, 0.95); % Nominal leg length (m)
   s_torso = clamp(userIn(18), 0, 1); % Scale leg actuator gains for torso stabilization
   s_leg = clamp(userIn(19), 0, 1); % Scale leg actuator gains for swing phase
+  d_offset = clamp(userIn(20), -0.1, 0.1); % Torso CoM offset
 
   % Controller input
-  dx_cmd = -0.6*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
-  dy_cmd = -0.3*clamp(controlIn(1), -1, 1); % Y Velocity (m/s)
+  dx_cmd = -1*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
+  dy_cmd = -0*0.3*clamp(controlIn(1), -1, 1); % Y Velocity (m/s)
   q0_pitch = -0*clamp(controlIn(4), -1, 1); % Torso pitch (rad)
   q0_roll = 0*clamp(controlIn(3), -1, 1); % Torso roll (rad)
 
@@ -116,13 +117,14 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
   % SIMULATION ONLY -------------------------------------------------------
   persistent T; if isempty(T); T = 0; else T = T + 0.001; end % if
-  % Figure eight
+
+  % % Figure eight
   % dx_cmd = 0.6*sin(T*2*pi/15);
   % dy_cmd = 0.4*cos(T*2*pi/7.5);
 
-  % Forward walk
-  dx_cmd = clamp(T*0.2, 0, 1.5);
-  dy_cmd = 0;
+  % % Forward walk
+  % dx_cmd = clamp(T*0.2, 0, 1.5);
+  % dy_cmd = 0;
 
   % Force standing controller
   isStand = true;
@@ -172,7 +174,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     % Forward kinematic lengths
     l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
     l_h = 0.18*stanceLeg;
-    l_t = 0.1;
+    l_t = 0.335*22.2/65;
 
     % Compute CoM velocities
     dx = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
@@ -208,7 +210,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
       % Step length is proportional to current velocity
       l_step = clamp(...
         dx_est*dx_gain + ...
-        (dx_est - dx_tgt)*dx_err_gain, ...
+        (dx_est - dx_tgt)*dx_err_gain + ...
+        l_t*sin(q(13)), ...
         -0.5, 0.5) - (x_st_e - x_est);
 
       % Set leg swing trigger point
@@ -270,7 +273,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
     % Stop lateral adjusment after target TD
     if s < 0.8 % trig
-      d = - d0_hip*stanceLeg - dy_est*dy_gain - (dy_est - dy_cmd)*dy_err_gain;
+      d = - d0_hip*stanceLeg - dy_est*dy_gain - (dy_est - dy_cmd)*dy_err_gain - d_offset*22.2/65 - l_t*sin(q(11));
     end % if
 
     % Inverse kinematics
@@ -278,7 +281,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     q1 = real(asin(d/L));
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
-    q_h = clamp(q_h, -0.1*stanceLeg, 0.3*stanceLeg);
+    q_h = clamp(q_h, -0.15*stanceLeg, 0.3*stanceLeg);
     dq_h = 0;
 
     % Hip feed-forward torque for gravity compensation
