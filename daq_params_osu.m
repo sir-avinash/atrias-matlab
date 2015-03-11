@@ -12,7 +12,8 @@
 
 % IMU Parameters (location dependent)
 imu_latitude = 44.5673031 * pi/180; % DRL latitude
-imu_heading = 2.7389; % Position for DRL Covell lab
+imu_heading = deg2rad(108); % Position for DRL Graf lab. 90 degrees magnetic!!!
+%imu_heading = 2.7389; % Position for DRL Covell lab
 
 % Update rates
 update_freq = 1000; %Hz
