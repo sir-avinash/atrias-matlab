@@ -124,9 +124,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   % dx_cmd = 0.5*sin(T*2*pi/15);
   % dy_cmd = 0.5*cos(T*2*pi/7.5);
 
-  % Forward walk
-  dx_cmd = clamp(0.2*round(T/5), 0, 1.5);
-  dy_cmd = 0;
+%   % Forward walk
+%   dx_cmd = clamp(0.2*round(T/5), 0, 1.5);
+%   dy_cmd = 0;
 
   % % Side step
   % dx_cmd = 0;
