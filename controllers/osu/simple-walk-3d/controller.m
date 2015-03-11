@@ -122,9 +122,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   % dx_cmd = 0.6*sin(T*2*pi/15);
   % dy_cmd = 0.4*cos(T*2*pi/7.5);
 
-  % % Forward walk
-  % dx_cmd = clamp(T*0.2, 0, 1.5);
-  % dy_cmd = 0;
+  % Forward walk
+  dx_cmd = clamp((T-5)*0.2, 0, 1);
+  dy_cmd = 0;
 
   % Force standing controller
   isStand = true;
@@ -173,11 +173,11 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
     % Forward kinematic lengths
     l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
-    l_h = 0.18*stanceLeg;
-    l_t = 0.335*22.2/65;
+    l_h = 0.1831*stanceLeg;
+    l_t = 0.335*22.2/60;
 
     % Compute CoM velocities
-    dx = l_l*mean(dq(13) + dq(leg_l(1:2))) + l_t*cos(q(13))*dq(13);
+    dx = -mean(cos(q(13) + q(leg_l(1:2))).*(dq(13) + dq(leg_l(1:2)))) + l_t*cos(q(13))*dq(13);
     dy = (l_l*cos(q(hip_m(1)) + q(11)) - l_h*sin(q(hip_m(1)) + q(11)))*(dq(hip_m(1)) + dq(11)) + l_t*cos(q(11))*dq(11);
 
     % Update CoM states when we are 'confident' stance leg is on the ground
@@ -212,7 +212,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
         dx_est*dx_gain + ...
         (dx_est - dx_tgt)*dx_err_gain + ...
         l_t*sin(q(13)), ...
-        -0.5, 0.5) - (x_st_e - x_est);
+        -0.3, 0.3);
 
       % Set leg swing trigger point
       trig = 0.8;
@@ -221,7 +221,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
       s = clamp(t/t_step, 0, 1);
     else
       % Step length is constant and in direction of target velocity
-      l_step = sign(dx_tgt)*0.4;
+      l_step = sign(dx_tgt)*0.2;
 
       % Set leg swing trigger point
       trig = 0.6;
@@ -237,8 +237,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     % Swing leg swing policy (use cubic spline to interpolate target
     % ground projection point of the toe and find the corresponding leg
     % angle given a desired length)
-    d_sw = cubic(0, 0.7, x_sw_e - x_st_e, l_step, 0, 0, s, 1);
-    r_sw = pi/2 + real(acos((0*x_st + (x_st_e - x_est) + d_sw)/l_sw)) - q(13);
+    d_sw = cubic(0, 0.7, x_sw_e, l_step, 0, 0, s, 1);
+    r_sw = pi/2 + real(acos(d_sw/l_sw)) - q(13);
 
     % Target swing leg actuator positions
     q_sw = r_sw + [-1; 1]*real(acos(l_sw));
@@ -271,10 +271,12 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     u(leg_u(3:4)) = u(leg_u(3:4)) + ...
       s_sw*s_torso*((q(13) - q0_pitch)*kp_leg + dq(13)*kd_leg);
 
-    % Stop lateral adjusment after target TD
-    if s < 0.8 % trig
-      d = - d0_hip*stanceLeg - dy_est*dy_gain - (dy_est - dy_cmd)*dy_err_gain - d_offset*22.2/65 - l_t*sin(q(11));
-    end % if
+    % Lateral foot placement
+    d = - d0_hip*stanceLeg - ...
+      dy_est*dy_gain - ...
+      (dy_est - dy_cmd)*dy_err_gain - ...
+      d_offset*22.2/60 - ...
+      l_t*sin(q(11));
 
     % Inverse kinematics
     L = sqrt(l_l^2 + l_h^2);
@@ -289,7 +291,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
     % Swing leg PD controller
     u(hip_u(2)) = u(hip_u(2)) + ...
-      s*(q_h - q(hip_m(2)))*kp_hip + (dq_h - dq(hip_m(2)))*kd_hip;
+      s*(1 - s_sw)*(q_h - q(hip_m(2)))*kp_hip + (dq_h - dq(hip_m(2)))*kd_hip;
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
