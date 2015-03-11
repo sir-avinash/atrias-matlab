@@ -59,7 +59,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   d_offset = clamp(userIn(20), -0.1, 0.1); % Torso CoM offset
 
   % Controller input
-  dx_cmd = -1*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
+  dx_cmd = -0.5*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
   dy_cmd = -0*0.3*clamp(controlIn(1), -1, 1); % Y Velocity (m/s)
   q0_pitch = -0*clamp(controlIn(4), -1, 1); % Torso pitch (rad)
   q0_roll = 0*clamp(controlIn(3), -1, 1); % Torso roll (rad)
@@ -122,9 +122,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   % dx_cmd = 0.6*sin(T*2*pi/15);
   % dy_cmd = 0.4*cos(T*2*pi/7.5);
 
-  % Forward walk
-  dx_cmd = clamp((T-5)*0.2, 0, 1);
-  dy_cmd = 0;
+  % % Forward walk
+  % dx_cmd = clamp((T-5)*0.2, 0, 1);
+  % dy_cmd = 0;
 
   % Force standing controller
   isStand = true;
