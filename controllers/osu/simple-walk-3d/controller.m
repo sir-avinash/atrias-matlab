@@ -124,9 +124,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   % dx_cmd = 0.5*sin(T*2*pi/15);
   % dy_cmd = 0.5*cos(T*2*pi/7.5);
 
-%   % Forward walk
-%   dx_cmd = clamp(0.2*round(T/5), 0, 1.5);
-%   dy_cmd = 0;
+  % % Forward walk
+  % dx_cmd = clamp(0.2*round(T/4), 0, 1.2);
+  % dy_cmd = 0;
 
   % % Side step
   % dx_cmd = 0;
@@ -206,7 +206,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     y_est = y_est + dy_est*dt;
 
     % Stance leg push-off is proportional to desired speed and error
-    l_ext = 0*clamp(...
+    l_ext = clamp(...
       1/30*abs(dx_tgt) + ...
       1/20*sign(dx_tgt)*(dx_tgt - dx_est), ...
       0, 0.02)*(sign(dx_tgt) == sign(dx_est));
@@ -242,19 +242,26 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
     % Swing leg retraction policy (immediately retract then extend once
     % past defined trigger point)
-    l_sw = l0_leg - (l_ret + l_clr)*(s < trig);
+    if s < 0.5
+      [l_sw, dl_sw] = cubic(0, 0.5, l0_leg, l0_leg - (l_ret + l_clr), 0, 0, s, 1);
+    else
+      [l_sw, dl_sw] = cubic(0.5, 1, l0_leg - (l_ret + l_clr), l0_leg, 0, 0, s, 1);
+    end
+    % l_sw = l0_leg - (l_ret + l_clr)*(s < trig);
 
     % Swing leg swing policy (use cubic spline to interpolate target
     % ground projection point of the toe and find the corresponding leg
     % angle given a desired length)
-    d_sw = cubic(0, 0.7, x_sw_e, l_step, 0, 0, s, 1);
+    [d_sw, dd_sw] = cubic(0, 0.7, x_sw_e, l_step, 0, 0, s, 1);
     r_sw = pi/2 + real(acos(d_sw/l_sw)) - q(13);
+    dr_sw = - dq(13) - (dd_sw/l_sw - (dl_sw*d_sw)/l_sw^2)/sqrt(1 - d_sw^2/l_sw^2);
 
     % Target swing leg actuator positions
     q_sw = r_sw + [-1; 1]*real(acos(l_sw));
 
     % Target swing leg actuator velocities
-    dq_sw = zeros(2,1);
+    % dq_sw = zeros(2,1);
+    dq_sw = dr_sw + [1; -1]*dl_sw/sqrt(1 - l_sw^2);
 
     % Swing leg actuator torques from PD controller
     u(leg_u(3:4)) = s_leg*((q_sw - q(leg_m(3:4)))*kp_leg + (dq_sw - dq(leg_m(3:4)))*kd_leg);
@@ -305,7 +312,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
-      [s_st; s_sw].*s_torso.*((q(11) - q0_roll)*kp_hip + dq(11)*kd_hip);
+      [s_st; s_sw].*s_torso.*(q(11) - q0_roll)*kp_hip + dq(11)*kd_hip;
 
     % Detect when swing leg force exceeds stance leg force
     if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)
