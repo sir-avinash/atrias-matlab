@@ -61,8 +61,8 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
   d0_offset_gain = clamp(userIn(22), -0.1, 0.1); % Toe offset gain
 
   % Controller input
-  dx_cmd = -0.6*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
-  dy_cmd = -0.2*clamp(controlIn(1), -1, 1); % Y Velocity (m/s)
+  dx_cmd = -1.2*clamp(controlIn(2), -1, 1); % X Velocity (m/s)
+  dy_cmd = -0*clamp(controlIn(1), -1, 1); % Y Velocity (m/s)
 
   % Gait parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
@@ -260,7 +260,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
     q_sw = r_sw + [-1; 1]*real(acos(l_sw));
 
     % Target swing leg actuator velocities
-    % dq_sw = zeros(2,1);
+%     dq_sw = zeros(2,1);
     dq_sw = dr_sw + [1; -1]*dl_sw/sqrt(1 - l_sw^2);
 
     % Swing leg actuator torques from PD controller
@@ -312,7 +312,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, controlIn)
 
     % Torso stabilization weighted PD controller
     u(hip_u) = u(hip_u) + ...
-      [s_st; s_sw].*s_torso.*(q(11) - q0_roll)*kp_hip + dq(11)*kd_hip;
+      [s_st; s_sw].*s_torso.*((q(11) - q0_roll)*kp_hip + dq(11)*kd_hip);
 
     % Detect when swing leg force exceeds stance leg force
     if (s_sw > s_st && t > 0.2) || (isStand && s >= 1)
