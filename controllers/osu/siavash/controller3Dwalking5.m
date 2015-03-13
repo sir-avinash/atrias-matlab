@@ -117,7 +117,7 @@ if simOrRobot==1
     ctrltest=userIn(7);
 else
     ctrltest=userIn(15); %default=0
-    if ctrltest==2
+%     if ctrltest==2
         k_fp_h_e=clamp(userIn(7),0,.4);
         k_fp_l_e=clamp(userIn(8),0,.4);
         T0=clamp(userIn(9),.1,2);
@@ -135,29 +135,31 @@ else
         k_fp_h_v=clamp(userIn(19),0,.4);
         k_fp_l_v=clamp(userIn(20),0,.4);
         a_max=clamp(userIn(21),0,2);
-    else
-        k_fp_h_e=userIn(7);
-        k_fp_l_e=userIn(8);
-        T0=userIn(9);
-        k_time=userIn(11);
-        kI=userIn(10);
-        kD=userIn(12);
-        
-        dx_des=userIn(13);
-        dy_des=userIn(14);
-        
-        xs0=userIn(16);
-        yss=userIn(17);
-        ys0=userIn(18);
-        k_fp_h_v=userIn(19);
-        k_fp_l_v=userIn(20);
-        a_max=userIn(21);
-    end
+        c_yaw=clamp(userIn(22),-.05,.05);
+        c_lat=clamp(userIn(23),0,.1);
+%     else
+%         k_fp_h_e=userIn(7);
+%         k_fp_l_e=userIn(8);
+%         T0=userIn(9);
+%         k_time=userIn(11);
+%         kI=userIn(10);
+%         kD=userIn(12);
+%         
+%         dx_des=userIn(13);
+%         dy_des=userIn(14);
+%         
+%         xs0=userIn(16);
+%         yss=userIn(17);
+%         ys0=userIn(18);
+%         k_fp_h_v=userIn(19);
+%         k_fp_l_v=userIn(20);
+%         a_max=userIn(21);
+%     end
 end
 
-if ctrltest==3
-    a_max=a_max/max(min(dx_des_p,1),.5);
-end
+% if ctrltest==3
+    a_max=a_max/max(min(dx_des_p,1.1),.35);
+% end
 
 T0=clamp(T0-.05*(dx_des-vs)*(dx_des>vs),.2,T0);
 
@@ -504,9 +506,9 @@ end
 
 
 if ctrltest==1
-    dx_uf=vG(1);
-else
     dx_uf=1/2*(sin(theta1)*dtheta1+sin(theta2)*dtheta2) + zG*cos(pitch)*dpitch;
+else
+    dx_uf=vG(1);
 end
 
 
@@ -627,6 +629,8 @@ x_fp=[k_fp_l_v*dx; k_fp_h_v*dy]+[k_fp_l_e; k_fp_h_e].*[dx-dx_des; dy-dy_des]+[xs
     +0*[0;.2].*clamp(kI*[0; ycp+.6*ycpp+.3*ycppp],-.05,.05)*walkCmd;
 
 
+x_fp(1)=x_fp(1)+c_yaw*(-1)^RefLeg;
+x_fp(2)=x_fp(2)+clamp(c_lat*abs(dx_des),0,.1)*(-1)^RefLeg;
 
 %% INITIALIZE =========================================================
 
