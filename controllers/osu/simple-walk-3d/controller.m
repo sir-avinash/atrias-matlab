@@ -128,7 +128,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
   % Simulation overrides
   if isSim
     % dx_cmd = 2.5*round(sin(T*2*pi/20));
-    dx_cmd = 2.5*(T > 2);
+    dx_cmd = 2.7*(T > 2);
     dy_cmd = 0;
     state = 1;
   end % if
@@ -181,7 +181,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
     y_est = y_est + dy_est*dt;
 
     % Stance leg push-off is proportional to desired speed and error
-    l_ext = clamp(0.03*abs(dx_tgt), 0, 0.08)*(sign(dx_tgt) == sign(dx_est));
+    l_ext = clamp(0.03*abs(dx_tgt), 0, 0.09)*(sign(dx_tgt) == sign(dx_est));
 
     % Step length is proportional to current velocity
     l_step = clamp(...
@@ -189,7 +189,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
       (dx_est - dx_tgt)*dx_err_gain + ...
       l_t*sin(q(13)) + ...
       stanceLeg*yaw_offset, ...
-      -0.35, 0.35);
+      -0.4, 0.4);
 
     % Define a time variant parameter
     s = clamp(t/t_step, 0, 1);
