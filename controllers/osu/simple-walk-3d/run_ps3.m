@@ -9,6 +9,9 @@ function run_ps3(isTest)
 
   % Initialize joystick
   vrj = vrjoystick(1);
+  
+  % Get current simulink model
+  model = gcs;
 
   % Initialize figure
   figure(...
@@ -62,8 +65,8 @@ function run_ps3(isTest)
     % Check test state
     if ~isTest
       % Pass joystick data to Simulink model
-      set_param([model '/Joystick Axis'], 'Value', mat2str(a));
-      set_param([model '/Joystick Buttons'], 'Value', mat2str(b));
+      set_param([model '/PS3 Axes'], 'Value', mat2str(a));
+      set_param([model '/PS3 Buttons'], 'Value', mat2str(b));
     end % if
 
     % Flush system queue
