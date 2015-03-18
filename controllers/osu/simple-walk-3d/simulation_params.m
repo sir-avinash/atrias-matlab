@@ -1,7 +1,7 @@
 %SIMULATION_PARAMS Simulation properties of ATRIAS.
 
 %% TIMINGS ================================================================
-t_end = 30;
+t_end = 10;
 % output_sample_time = 1/30; % For video renders
 output_sample_time = 1/1000; % For more detailed plots and animation
 

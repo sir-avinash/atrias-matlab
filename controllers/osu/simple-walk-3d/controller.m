@@ -37,10 +37,13 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
   u = zeros(6,1);
 
   % Initialize user output vector
-  userOut = zeros(6,1);
+  userOut = zeros(26,1);
 
-  % Gait parameters
+  % Robot parameters
   ks_leg = 2950; % Leg rotational spring constant (N*m/rad)
+  m_torso = 22.2; % Torso mass (kg)
+  m_leg = 20.15; % Leg mass (kg)
+  g = 9.81; % Gravity
 
   % Controller parameters
   dt = 0.001; % Sample time (sec)
@@ -137,9 +140,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
   if isSim
     state = 1;
 
-    % dx_cmd = 0;
+    dx_cmd = 0;
     % dx_cmd = 1.5*round(sin(T*2*pi/15));
-    dx_cmd = 0.25*(floor(T/5));
+    % dx_cmd = 0.25*(floor(T/5));
     % dx_cmd = 2.5*(T > 2);
 
     dy_cmd = 0;
@@ -168,9 +171,10 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
     y_sw = sum(cos(q(13) + q(leg_l(3:4)))/2);
 
     % Forward kinematic lengths
-    l_l = cos((q(leg_l(2)) - q(leg_l(1)))/2);
+    l_l = cos(q(leg_l(2))/2 - q(leg_l(1))/2);
+    dl_l = -sin(q(leg_l(1))/2 - q(leg_l(2))/2)*(dq(leg_l(1))/2 - q(leg_l(2))/2);
     l_h = 0.1831*stanceLeg;
-    l_t = 0.335*22.2/60;
+    l_t = 0.335*m_leg/(m_torso + 2*m_leg);
 
     % Estimate CoM velocities assuming stance leg is fixed on the ground
     dx = -mean(cos(q(13) + q(leg_l(1:2))).*(dq(13) + dq(leg_l(1:2)))) + l_t*cos(q(13))*dq(13);
@@ -203,6 +207,7 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
       (dx_est - dx_tgt)*dx_err_p_gain + ...
       (dx_est - dx_est_e)*dx_err_d_gain - ...
       l_t*sin(q(13)) + ...
+      x_offset*m_leg/(m_torso + 2*m_leg) + ...
       stanceLeg*yaw_offset, ...
       -0.4, 0.4);
 
@@ -254,12 +259,12 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
     u(leg_u(3:4)) = u(leg_u(3:4)) + ...
       s_sw*s_torso*(q(13)*kp_leg + dq(13)*kd_leg);
 
-    % Lateral foot placement
+    % Lateral foot placement policy
     d = - (y0_offset - y0_gain*abs(dx_tgt))*stanceLeg - ...
       dy_est*dy_gain - ...
       (dy_est - dy_cmd)*dy_err_p_gain - ...
       (dy_est - dy_est_e)*dy_err_d_gain - ...
-      y_offset*22.2/60 - ...
+      y_offset*m_leg/(m_torso + 2*m_leg) - ...
       l_t*sin(q(11));
 
     % Inverse kinematics
@@ -268,11 +273,11 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
     q2 = real(asin(-l_h/L));
     q_h = q1 - q2 - q(11);
     q_h = clamp(q_h, -0.15*stanceLeg, 0.3*stanceLeg);
-    dq_h = 0;
+    dq_h = -real((d*l_l*dl_l)/(sqrt(1 - d^2/(l_h^2 + l_l^2))*(l_h^2 + l_l^2)^(3/2))) - real((l_h*l_l*dl_l)/(sqrt(1 - l_h^2/(l_h^2 + l_l^2))*(l_h^2 + l_l^2)^(3/2))) - dq(11);
 
     % Hip feed-forward torque for gravity compensation
     if s_st > 0 || s_sw > 0
-      u(hip_u) = 35.*[stanceLeg; -stanceLeg];
+      u(hip_u) = m_leg*g*abs(l_h).*[stanceLeg; -stanceLeg];
     end % if
 
     % Swing leg PD controller
@@ -302,7 +307,9 @@ function [eStop, u, userOut] = controller(q, dq, userIn, ps3Axes, ps3Buttons)
     end % if
 
     % User outputs
-    userOut = [y_est; x_est; dx_est; dy_est; dx_tgt; dy_tgt];
+    userOut = [y_est; x_est; dx_est; dy_est; dx_tgt; dy_tgt;
+      q_st; q_sw; q_h; q(leg_m); q(hip_m(2));
+      dq_st; dq_sw; dq_h; dq(leg_m); dq(hip_m(2))];
 
   otherwise % RELAX -------------------------------------------------------
     % Reset persistent variables
