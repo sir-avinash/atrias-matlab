@@ -1,3 +1,5 @@
+% TODO: Try re-inserting the params variable, but initialize it in the constructor.
+
 classdef IMUSys < handle
 	methods
 		% Constructor -- does some basic init that can't directly be done to the properties themselves
@@ -102,14 +104,8 @@ classdef IMUSys < handle
 			% Remove the Earth's rotation from the gyro measurements
 			gyros_world = gyros_world - this.earth_rot;
 
-			% Compute the new angular velocity
-			ang_vel = gyros_world / this.sample_time;
-
-			% Compute the angular acceleration, compensating for any missed cycles
-			this.ang_accel = (ang_vel - this.ang_vel) / (double(dseq) * this.sample_time);
-
-			% Copy over the angular velocity as our output and for use in the next iteration.
-			this.ang_vel = ang_vel;
+			% Compute the angular velocities
+			this.ang_vel = gyros_world / this.sample_time;
 
 			% Rescale the gyro delta angles using dseq to make up for any missed cycles
 			gyros_world = double(dseq) * gyros_world;
@@ -159,7 +155,7 @@ classdef IMUSys < handle
 
 		% The main IMU update loop; contains a state machine to handle alignment
 		% ang_vel is in IMU coordinates!
-		function [local_orient, ang_vel, state, fail_reas, ang_accel] = ...
+		function [local_orient, ang_vel, state, fail_reas] = ...
 			update(this, gyros, accels, seq, status, latitude, heading)
 		%
 			% Compute the size of the seq increment (note that seq wraps modulo 128).
@@ -210,7 +206,6 @@ classdef IMUSys < handle
 			% Update the function outputs
 			local_orient = this.imu_orient * this.local_rel_imu;
 			ang_vel      = this.ang_vel;
-			ang_accel    = this.ang_accel;
 			state        = this.state;
 			fail_reas    = this.fail_reas;
 		end
@@ -233,11 +228,6 @@ classdef IMUSys < handle
 
 		% Current angular velocity, in world coordinates
 		ang_vel = [0; 0; 0]
-
-		% Current angular acceleration, world relative.
-		% Note that this cannot simply be rotated into a robot-relative frame
-		% to get a robot-relative angular acceleration.
-		ang_accel = [0; 0; 0]
 
 		% Earth's angular velocity, radians per cycle
 		earth_rot = [0; 0; 0]
