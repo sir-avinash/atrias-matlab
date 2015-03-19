@@ -87,7 +87,7 @@ HIP_MTR_MAX_TORQUE = MTR_HIP_MAX_CURRENT*HIP_MOTOR_CONSTANT*HIP_MTR_GEAR_RATIO;
 LEG_CURRENT_LIMIT = 100.0; % Maximum motor current for testing
 HIP_CURRENT_LIMIT = 60.0;  % Maximum motor current for testing
 
-
+% Right Leg
 LEG1_LEG_A_CALIB_VAL = 265417675; %Calibration encoder value in ticks
 LEG1_TRAN_A_CALIB_VAL = 143046540; %Calibration encoder value in ticks
 LEG1_LEG_B_CALIB_VAL = 175319150; %Calibration encoder value in ticks
@@ -99,6 +99,7 @@ LEG1_TRAN_B_RAD_PER_CNT = -9.8039216e-09; %Ticks to rad constant
 LEG1_MOTOR_A_DIRECTION = -1.0; 
 LEG1_MOTOR_B_DIRECTION = -1.0;
 
+% Left Leg
 LEG2_LEG_A_CALIB_VAL = 264357825; %Calibration encoder value in ticks
 LEG2_TRAN_A_CALIB_VAL = 142300933; %Calibration encoder value in ticks
 LEG2_LEG_B_CALIB_VAL = 261444054; %Calibration encoder value in ticks
